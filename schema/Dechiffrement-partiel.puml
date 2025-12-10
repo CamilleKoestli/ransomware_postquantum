@@ -1,0 +1,48 @@
+@startuml Ransomware Architecture - Déchiffrement Partiel
+
+title Déchiffrement Partiel (Fichier ou Dossier spécifique)
+
+actor Attaquant as attacker
+participant "Serveur" as server
+participant "Client\n(Machine victime)" as client
+participant "Système de fichiers" as fs
+database "Root Key (RK)" as rk
+
+== Demande de déchiffrement ==
+attacker -> client: Demande déchiffrement\nd'un fichier/dossier spécifique
+activate client
+
+client -> fs: Lit métadonnées chiffrées\ndu fichier
+activate fs
+fs --> client: Métadonnées chiffrées\n(nonce, clé fichier, tag)
+deactivate fs
+
+client -> server: Envoie métadonnées\nchiffrées
+activate server
+
+== Déchiffrement de la clé ==
+server -> rk: Récupère RK
+activate rk
+rk --> server: RK
+deactivate rk
+
+server -> server: Unwrap clé fichier avec RK\n(AES-KW 256 bits)
+
+server -> client: Envoie clé déchiffrée\n(nonce, clé fichier, tag)
+deactivate server
+
+== Déchiffrement du fichier ==
+client -> fs: Lit fichier chiffré
+activate fs
+fs --> client: Contenu chiffré
+
+client -> client: Déchiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce, tag)
+
+client -> fs: Écrit fichier déchiffré
+fs --> client: OK
+deactivate fs
+
+client --> attacker: Fichier déchiffré
+deactivate client
+
+@enduml

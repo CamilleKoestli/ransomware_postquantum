@@ -1,0 +1,52 @@
+@startuml Ransomware Architecture - Vue d'ensemble
+
+title Architecture Globale du Ransomware Post-Quantique
+
+package "Machine Victime" {
+    component "Client Ransomware" as client {
+        [Module Chiffrement\nAES-GCM 256 bits] as aes
+        [Module Dérivation\nArgon2] as argon
+        [Module Post-Quantique\nCRYSTALS-Kyber] as kyber
+        [Module Key Wrapping\nAES-KW 256 bits] as kw
+    }
+
+    database "Fichiers" as files
+    database "rootkey.bin" as rootkey
+}
+
+package "Serveur Attaquant" {
+    component "Serveur" as server {
+        [Gestion des clés] as keymanager
+        [Communication] as comm
+        [Stockage RK] as storage
+    }
+}
+
+cloud "Communication\nsécurisée" as network
+
+client <--> network
+server <--> network
+
+client --> files : Chiffre/Déchiffre
+client --> rootkey : Stocke RK chiffrée
+
+note right of kyber
+    **Niveau de sécurité: 5**
+    - AES 256 bits
+    - Résistant quantique
+      (CRYSTALS-Kyber)
+    - Argon2 contre
+      force brute
+end note
+
+note bottom of files
+    **Métadonnées chiffrées:**
+    - Nonce
+    - Clé fichier (256 bits)
+    - Tag d'authentification
+
+    Tout chiffré avec RK
+    (AES-KW 256 bits)
+end note
+
+@enduml

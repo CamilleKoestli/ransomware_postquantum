@@ -1,0 +1,42 @@
+@startuml Ransomware Architecture - Modification du Mot de Passe
+
+title Modification du Mot de Passe
+
+actor Attaquant as attacker
+participant "Serveur" as server
+participant "Client\n(Machine victime)" as client
+database "rootkey.bin" as rootkey
+
+== Demande de réinitialisation ==
+attacker -> server: Demande réinitialisation\ndu mot de passe
+activate server
+
+server -> client: Demande réinitialisation
+activate client
+
+== Génération du nouveau mot de passe ==
+client -> client: Génère nouveau mot de passe\naléatoire (du dictionnaire)
+client -> client: Dérive nouvelle MK\navec Argon2
+
+client -> server: Transmet nouveau mot de passe\net paramètres Argon2
+
+== Rechiffrement de la Root Key ==
+server -> server: Dérive nouvelle MK\navec Argon2
+server -> server: Déchiffre RK\navec ancienne MK
+server -> server: Chiffre RK\navec nouvelle MK\n(AES-KW 256 bits)
+
+server -> client: Envoie nouvelle RK chiffrée
+
+== Mise à jour sur le client ==
+client -> rootkey: Remplace ancienne RK chiffrée\npar nouvelle
+activate rootkey
+rootkey --> client: OK
+deactivate rootkey
+
+client --> server: Mot de passe modifié
+deactivate client
+
+server --> attacker: Mot de passe réinitialisé
+deactivate server
+
+@enduml

@@ -1,0 +1,44 @@
+@startuml Ransomware Architecture - Initialisation et Chiffrement
+
+title Initialisation et Chiffrement des Fichiers
+
+actor Attaquant as attacker
+participant "Client\n(Machine victime)" as client
+participant "Système de fichiers" as fs
+database "rootkey.bin" as rootkey
+
+== Génération des clés ==
+attacker -> client: Lance le ransomware
+activate client
+
+client -> client: Génère mot de passe aléatoire\n(du dictionnaire)
+client -> client: Dérive Master Key (MK)\navec Argon2 (256 bits)
+client -> client: Génère Root Key (RK)\nCRYSTALS-Kyber (256 bits)
+
+== Chiffrement de la Root Key ==
+client -> client: Chiffre RK avec MK\n(AES-KW 256 bits)
+client -> rootkey: Stocke RK chiffrée\ndans rootkey.bin
+activate rootkey
+
+== Chiffrement des fichiers ==
+loop Pour chaque fichier
+    client -> fs: Lit le fichier
+    activate fs
+    fs --> client: Contenu du fichier
+
+    client -> client: Génère clé fichier aléatoire\n(256 bits)
+    client -> client: Génère nonce unique
+    client -> client: Chiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce)
+
+    client -> client: Obtient le tag d'authentification
+    client -> client: Chiffre (nonce, clé fichier, tag)\navec RK (AES-KW 256 bits)
+
+    client -> fs: Écrit fichier chiffré\navec métadonnées chiffrées
+    fs --> client: OK
+    deactivate fs
+end
+
+client --> attacker: Fichiers chiffrés
+deactivate client
+
+@enduml
