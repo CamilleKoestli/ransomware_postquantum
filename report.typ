@@ -107,7 +107,7 @@ Même niveau de sécurité partout
 + Master Key (MK) : 256 bits
 + Root Key (RK) : 256 bits
 
-= Architecture du ransomware
+= Architecture cryptographique
 Le ransomware est composé de deux parties principales : le client et le serveur.
 - Le client est responsable du chiffrement des fichiers sur la machine de la victime.
 - Le serveur gère la génération des clés, le stockage sécurisé des informations de chiffrement et la communication avec le client.
@@ -127,7 +127,7 @@ Le ransomware est composé de deux parties principales : le client et le serveur
 + On génère une Root Key aléatoire CRYSTALS-Kyber de 256 bits.
 
 == Chiffrement des fichiers et de la Root Key
-Le chiffrement se fera au niveau où le le ransomware est lancé (dossier ou disque entier), sans prendre le ransomware dans le chiffrement et les dossiers au dessus.
+Le chiffrement se fera au niveau où le ransomware est lancé (dossier ou disque entier), sans prendre le ransomware dans le chiffrement et les dossiers au dessus.
 
 Le chiffrement des fichiers se fait de la manière suivante :
 - Pour chaque fichier à chiffrer:
@@ -136,7 +136,7 @@ Le chiffrement des fichiers se fait de la manière suivante :
 
 - Pour la Root Key:
   + On chiffre la RK avec la MK avec AES-KW 256 bits.
-  + On stocke le tout dans un nouveau fichier `rootkey.bin` ???.
+  + On stocke le tout dans un nouveau fichier `rootkey.bin`.
 
 == Paiement de la rançon
 Lors du choix de payer la rançon :
@@ -162,7 +162,7 @@ Lors du choix de payer la rançon :
 + Le client dérive une nouvelle MK avec Argon2.
 + Le client transmet le paquet de mot de passe et paramètres Argon2 au serveur.
 + Le serveur dérive la nouvelle MK et déchiffre la RK avec la MK.
-+ Le serveur chiffre la RK avec la nouvelle MK et stocke le tout dans `rootkey.bin` ???.
++ Le serveur chiffre la RK avec la nouvelle MK et stocke le tout dans `rootkey.bin`.
 + Le serveur envoie la RK chiffrée au client.
 + Le client remplace le fichier de l'ancienne RK chiffrée par la nouvelle.
 
@@ -172,10 +172,11 @@ Lors du choix de payer la rançon :
 - `pyca/cryptography` pour le chiffrement symétrique (AES-GCM, AES-KW)
 - `pyca/argon2` pour la dérivation de clés avec Argon2
 - `pqcrypto` pour les opérations post-quantiques avec CRYSTALS-Kyber
-- `os` et `secrets` pour la génération de nombres aléatoires sécurisés
-- `struct` pour la manipulation des données binaires
-- `json` pour le stockage des métadonnées des fichiers
-- `base64` pour l'encodage et le décodage des données binaires
+
+CRYSTALS-Kyber (ML-KEM-1024) : Utilisé UNIQUEMENT pour générer/échanger la Root Key
+AES-KW 256 : Utilisé pour TOUTES les encapsulations de clés
+AES-GCM 256 : Utilisé pour chiffrer les fichiers
+Argon2id : Utilisé pour dériver la Master Key du mot de passe
 
 = Conclusion
 
@@ -186,6 +187,7 @@ La rédaction de ce rapport a bénéficié de l’assistance d’intelligences a
 - La reformulation de phrases afin d’améliorer la clarté et la qualité du texte.
 - La structuration de certains paragraphes pour une meilleure cohérence.
 - La vérification des termes techniques.
+- La correction et ajouts d'éléments sur les schémas explicatifs.
 
 Cette aide m’a permis de maintenir une certaine qualité dans la rédaction tout en respectant l’aspect technique et les objectifs pédagogiques du projet. L’IA n’a pas écrit le rapport à ma place, mais elle a été utilisée comme un outil de soutien à la rédaction.
 
