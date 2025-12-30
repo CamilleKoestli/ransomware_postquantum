@@ -1,45 +1,41 @@
-@startuml Ransomware Architecture - Déchiffrement Complet
+@startuml 02-Déchiffrement_Complet
 
-title Déchiffrement Complet (Paiement de la rançon)
+title Déchiffrement Complet
 
 actor Attaquant as attacker
 participant "Serveur" as server
-participant "Client\n(Machine victime)" as client
+participant "Victime" as victime
 database "rootkey.bin" as rootkey
 participant "Système de fichiers" as fs
 
 == Transmission du mot de passe ==
 attacker -> server: Initie le déchiffrement complet
 activate server
-server -> client: Envoie mot de passe\net paramètres Argon2
-activate client
+server -> victime: Envoie mot de passe\net paramètres Argon2
+activate victime
 
 == Déchiffrement de la Root Key ==
-client -> client: Dérive MK avec Argon2\n(mot de passe + paramètres)
-client -> rootkey: Lit RK chiffrée\n(ciphertext, nonce, tag)
-activate rootkey
-rootkey --> client: RK chiffrée
+victime -> victime: Dérive MK avec Argon2\n(mot de passe + paramètres)
 deactivate rootkey
 
-client -> client: Déchiffre RK avec MK\n(AES-GCM 256 bits)
+victime -> victime: Déchiffre RK avec MK\n(AES-GCM 256 bits)
 
 == Déchiffrement des fichiers ==
 loop Pour chaque fichier chiffré
-    client -> fs: Lit fichier chiffré\net métadonnées
+    victime -> fs: Lit fichier chiffré\net métadonnées
     activate fs
-    fs --> client: Contenu chiffré + métadonnées
 
-    client -> client: Déchiffre la clé fichier avec RK\n(AES-GCM 256 bits)\nà partir de wrapped_key (ciphertext, nonce, tag)
+    victime -> victime: Déchiffre la clé fichier avec RK\n(AES-GCM 256 bits)\nà partir de wrapped_key (ciphertext, nonce, tag)
 
-    client -> client: Déchiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce, tag)
+    victime -> victime: Déchiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce, tag)
 
-    client -> fs: Écrit fichier déchiffré
-    fs --> client: OK
+    victime -> fs: Écrit fichier déchiffré
+    fs --> victime: OK
     deactivate fs
 end
 
-client --> server: Déchiffrement terminé
-deactivate client
+victime --> server: Déchiffrement terminé
+deactivate victime
 server --> attacker: Tous les fichiers déchiffrés
 deactivate server
 

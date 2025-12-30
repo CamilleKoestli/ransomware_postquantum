@@ -1,44 +1,41 @@
-@startuml Ransomware Architecture - Initialisation et Chiffrement
+@startuml 01-Initialisation_Chiffrement
 
 title Initialisation et Chiffrement des Fichiers
 
 actor Attaquant as attacker
-participant "Client\n(Machine victime)" as client
+participant "Victime" as victime
 participant "Système de fichiers" as fs
 database "rootkey.bin" as rootkey
 
 == Génération des clés ==
-attacker -> client: Lance le ransomware
-activate client
+attacker -> victime: Lance le ransomware
+activate victime
 
-client -> client: Génère mot de passe aléatoire\n(du dictionnaire)
-client -> client: Dérive Master Key (MK)\navec Argon2 (256 bits)
-client -> client: Génère Root Key (RK) via\nCRYSTALS-Kyber encapsulation
+victime -> victime: Génère mot de passe aléatoire\ndu dictionnaire
+victime -> victime: Dérive Master Key (MK)\navec Argon2 (256 bits)
+victime -> victime: Génère Root Key (RK) via\nCRYSTALS-Kyber encapsulation
 
 == Chiffrement de la Root Key ==
-client -> client: Chiffre RK avec MK\n(AES-GCM 256 bits)
-client -> rootkey: Stocke RK chiffrée (ciphertext, nonce, tag)\net kyber_ciphertext dans rootkey.bin
+victime -> victime: Chiffre RK avec MK\n(AES-GCM 256 bits)
+victime -> rootkey: Stocke RK chiffrée (ciphertext, nonce, tag)\net kyber_ciphertext dans rootkey.bin
 activate rootkey
 
 == Chiffrement des fichiers ==
 loop Pour chaque fichier
-    client -> fs: Lit le fichier
-    activate fs
-    fs --> client: Contenu du fichier
 
-    client -> client: Génère clé fichier aléatoire\n(256 bits)
-    client -> client: Génère nonce unique
-    client -> client: Chiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce)
+    victime -> victime: Génère clé fichier\n(256 bits)
+    victime -> victime: Génère nonce unique
+    victime -> victime: Chiffre le fichier\navec AES-GCM 256 bits
 
-    client -> client: Obtient le tag d'authentification
-    client -> client: Chiffre la clé fichier avec RK\n(AES-GCM 256 bits)\nobtient: wrapped_key (ciphertext, nonce, tag)
+    victime -> victime: Obtient le tag d'authentification
+    victime -> victime: Chiffre la clé fichier avec RK\n(AES-GCM 256 bits)\nobtient: wrapped_key (ciphertext, nonce, tag)
 
-    client -> fs: Écrit fichier chiffré et\nmétadonnées (clé encapsulée)
-    fs --> client: OK
+    victime -> fs: Écrit fichier chiffré et\nmétadonnées (clé encapsulée)
+    fs --> victime: OK
     deactivate fs
 end
 
-client --> attacker: Fichiers chiffrés
-deactivate client
+victime --> attacker: Fichiers chiffrés
+deactivate victime
 
 @enduml

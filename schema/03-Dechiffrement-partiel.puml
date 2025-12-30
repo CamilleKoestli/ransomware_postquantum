@@ -1,23 +1,19 @@
-@startuml Ransomware Architecture - Déchiffrement Partiel
+@startuml 03-Dechiffrement_Spécifique
 
-title Déchiffrement Partiel (Fichier spécifique)
+title Déchiffrement fichier spécifique
 
 actor Attaquant as attacker
 participant "Serveur" as server
-participant "Client\n(Machine victime)" as client
+participant "Victime" as victime
 participant "Système de fichiers" as fs
 database "Root Key (RK)" as rk
 
 == Demande de déchiffrement ==
-attacker -> client: Demande déchiffrement\nd'un fichier spécifique
-activate client
+attacker -> victime: Demande déchiffrement\nd'un fichier spécifique
+activate victime
 
-client -> fs: Lit fichier .meta
-activate fs
-fs --> client: Métadonnées\n(wrapped_key: ciphertext, nonce, tag)
-deactivate fs
 
-client -> server: Envoie wrapped_key\n(ciphertext, nonce, tag)\net kyber_ciphertext
+victime -> server: Envoie wrapped_key\n(ciphertext, nonce, tag)\net kyber_ciphertext
 activate server
 
 == Déchiffrement de la clé ==
@@ -28,21 +24,21 @@ deactivate rk
 
 server -> server: Unwrap clé fichier avec RK\n(AES-GCM 256 bits)
 
-server -> client: Envoie clé fichier déchiffrée
+server -> victime: Envoie clé fichier déchiffrée
 deactivate server
 
 == Déchiffrement du fichier ==
-client -> fs: Lit fichier chiffré
+victime -> fs: Lit fichier chiffré
 activate fs
-fs --> client: Contenu chiffré
+fs --> victime: Contenu chiffré
 
-client -> client: Déchiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce, tag)
+victime -> victime: Déchiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce, tag)
 
-client -> fs: Écrit fichier déchiffré
-fs --> client: OK
+victime -> fs: Écrit fichier déchiffré
+fs --> victime: OK
 deactivate fs
 
-client --> attacker: Fichier déchiffré
-deactivate client
+victime --> attacker: Fichier déchiffré
+deactivate victime
 
 @enduml
