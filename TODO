@@ -5,11 +5,6 @@ Implémentation :
 CRYSTALS-Kyber-1024 (ML-KEM) : utilisé uniquement pour générer/échanger la Root Key (RK)
 AES-GCM 256 : utilisé pour chiffrer les fichiers ET toutes les clés (wrapping)
 
-- Lors du chiffrement : enlever fichier non-chiffré, garder que le encrypted sans cette extension, meta dans métadonnées ?
-- Test déchiffrer un fichier
-- Test déchiffrer un dossier
-- Test déchiffrer tout
-- Test changement de mot de passe
 - Revoir le fonctionnement et l'utilisation de CRYSTALS-Kyber
 
 Rapport :
