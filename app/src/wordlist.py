@@ -1,22 +1,26 @@
 """
 Génération de mots de passe aléatoires pour le ransomware
-Utilise la wordlist rockyou.txt avec filtrage à la volée (4-10 caractères, alphanumériques)
+Utilise la wordlist rockyou.txt
 """
 
 import secrets
 from pathlib import Path
 
-# Chemin vers rockyou.txt
+# Chemin vers la wordlist
+# Option 1: rockyou.txt (fichier complet ~134 MB, à télécharger)
 ROCKYOU_PATH = Path(__file__).parent / "rockyou.txt"
 
-# Cache de mots chargés depuis rockyou.txt
+# Option 2: rockyou_filtered.txt (liste simple de ~100 mots pour les tests)
+# ROCKYOU_PATH = Path(__file__).parent / "rockyou_filtered.txt"
+
+# Cache de mots chargés depuis la wordlist
 _WORD_CACHE = None
 _CACHE_SIZE = 50000  # Nombre de mots à charger en cache
 
 
 def _load_rockyou_words():
     """
-    Charge un échantillon aléatoire de mots depuis rockyou.txt avec filtrage
+    Charge un échantillon aléatoire de mots depuis rockyou.txt
 
     Returns:
         Liste de mots valides (4-10 caractères, alphanumériques)
@@ -29,9 +33,6 @@ def _load_rockyou_words():
     if not ROCKYOU_PATH.exists():
         raise FileNotFoundError(
             f"rockyou.txt introuvable à {ROCKYOU_PATH}. "
-            "Veuillez télécharger rockyou.txt depuis:\n"
-            "https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt\n"
-            "et le placer dans app/src/"
         )
 
     print(f"[WORDLIST] Chargement et filtrage de {_CACHE_SIZE} mots depuis rockyou.txt...")

@@ -9,7 +9,6 @@ __pycache__/
 
 # Wordlists
 app/src/rockyou.txt
-app/src/rockyou_filtered.txt
 
 # Test files
 app/test/dossier_0
