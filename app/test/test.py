@@ -32,11 +32,14 @@ print("\n" + "=" * 70)
 print("TEST 4: DÉCHIFFREMENT D'UN FICHIER SPÉCIFIQUE")
 print("=" * 70)
 
-# Supprime le fichier déchiffré pour tester
-if os.path.exists("dossier_0/fichier_0.1.txt"):
-    os.remove("dossier_0/fichier_0.1.txt")
+# Re-chiffre les fichiers pour tester le déchiffrement partiel
+client.encrypt_directory("dossier_0")
 
-client.decrypt_file("dossier_0/fichier_0.1.txt.encrypted")
+# Supprime le fichier déchiffré pour tester
+if os.path.exists("dossier_0/fichier1.txt"):
+    os.remove("dossier_0/fichier1.txt")
+
+client.decrypt_file("dossier_0/fichier1.txt.encrypted")
 
 print("\n" + "=" * 70)
 print("TOUS LES TESTS RÉUSSIS!")
