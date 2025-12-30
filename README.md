@@ -14,7 +14,7 @@ Implémentation d'un système de ransomware utilisant des techniques cryptograph
 - **Encapsulation des clés** : AES-GCM 256 bits
 - **Dérivation de clés** : Argon2id
 - **Génération de clés** : CRYSTALS-Kyber-1024 (ML-KEM)
-- **Génération de mots de passe** : rockyou_filtered.txt (~12.5M mots, 111 MB)
+- **Génération de mots de passe** : rockyou_filtered.txt
 
 ## Architecture
 
@@ -26,7 +26,7 @@ app/
 │   ├── config.py               # Configuration et constantes
 │   ├── crypto_utils.py         # Utilitaires cryptographiques
 │   ├── wordlist.py             # Génération de mots de passe
-│   ├── rockyou_filtered.txt    # Wordlist filtrée (12.5M mots, 111 MB)
+│   ├── rockyou_filtered.txt    # Wordlist filtrée
 │   ├── server.py               # Module serveur (gestion des clés)
 │   ├── client.py               # Module client (chiffrement/déchiffrement)
 │   ├── main.py                 # Interface utilisateur interactive
