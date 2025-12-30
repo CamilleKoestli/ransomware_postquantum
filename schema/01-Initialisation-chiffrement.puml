@@ -33,7 +33,7 @@ loop Pour chaque fichier
     client -> client: Obtient le tag d'authentification
     client -> client: Chiffre la clé fichier avec RK\n(AES-GCM 256 bits)\nobtient: wrapped_key (ciphertext, nonce, tag)
 
-    client -> fs: Écrit fichier chiffré\navec métadonnées chiffrées
+    client -> fs: Écrit fichier chiffré et\nmétadonnées (clé encapsulée)
     fs --> client: OK
     deactivate fs
 end

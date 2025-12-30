@@ -2,7 +2,7 @@
 Configuration et constantes pour le ransomware post-quantique
 """
 
-# Tailles de clés (en octets)
+# Tailles clés
 KEY_SIZE = 32  # 256 bits
 
 # Paramètres Argon2 (pour tests, valeurs modérées)
@@ -13,7 +13,6 @@ ARGON2_HASH_LEN = 32  # 256 bits
 ARGON2_SALT_LEN = 16  # 128 bits
 
 # Extensions de fichiers
-ENCRYPTED_EXTENSION = ".encrypted"
 META_EXTENSION = ".meta"
 ROOTKEY_FILENAME = "rootkey.bin"
 
@@ -33,7 +32,6 @@ EXCLUDED_FILES = {
 EXCLUDED_EXTENSIONS = {
     ".py",
     ".pyc",
-    ENCRYPTED_EXTENSION,
     META_EXTENSION,
 }
 

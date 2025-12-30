@@ -123,8 +123,8 @@ Le ransomware est composé de deux parties principales : le client et le serveur
 - Possibilité de modification du mot de passe de chiffrement
 
 == Lancement du ransomware
-+ On génère une Master Key (MK) dérivée d'un mot de passe aléatoire du dictionnaire Argon2.
-+ On génère une Root Key aléatoire CRYSTALS-Kyber de 256 bits.
++ On génère une Master Key (MK) dérivée avec Argon2 à partir d'un mot de passe aléatoire du dictionnaire rockyou.txt.
++ On génère la Root Key (RK) de 256 bits via encapsulation CRYSTALS-Kyber-1024.
 
 == Chiffrement des fichiers et de la Root Key
 Le chiffrement se fera au niveau où le ransomware est lancé (dossier ou disque entier), sans prendre le ransomware dans le chiffrement et les dossiers au dessus.

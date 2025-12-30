@@ -57,7 +57,7 @@ app/
 
 ### Flux de chiffrement
 
-1. Le serveur génère un mot de passe aléatoire depuis rockyou_filtered.txt (ex: "dragon-shadow-matrix-secret")
+1. Le serveur génère un mot de passe aléatoire depuis rockyou.txt (ex: "dragon-shadow-matrix-secret")
 2. Le client dérive une Master Key (MK) à partir du mot de passe avec Argon2
 3. Le serveur génère une paire de clés Kyber-1024 (publique/secrète)
 4. Le client génère la Root Key (RK) via encapsulation Kyber avec la clé publique
@@ -273,9 +273,8 @@ hash_len = 32          # 256 bits
 ### Limitations (contexte éducatif)
 
 - ⚠️ Communication client-serveur simulée localement (pas de réseau)
-- ⚠️ Fichiers originaux non supprimés (pour faciliter les tests)
 - ⚠️ Pas de vérification d'intégrité de `rootkey.bin`
-- ⚠️ Stockage des métadonnées en clair (augmente la taille des données)
+- ⚠️ Métadonnées stockées en JSON/base64 (format lisible, augmente la taille des données)
 
 ## Tests
 

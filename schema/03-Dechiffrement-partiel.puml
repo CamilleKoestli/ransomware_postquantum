@@ -12,7 +12,7 @@ database "Root Key (RK)" as rk
 attacker -> client: Demande déchiffrement\nd'un fichier spécifique
 activate client
 
-client -> fs: Lit métadonnées chiffrées\ndu fichier
+client -> fs: Lit fichier .meta
 activate fs
 fs --> client: Métadonnées\n(wrapped_key: ciphertext, nonce, tag)
 deactivate fs
