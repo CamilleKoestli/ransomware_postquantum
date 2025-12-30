@@ -171,7 +171,8 @@ python test.py
 Chiffre récursivement tous les fichiers d'un dossier :
 
 - Génère une clé unique par fichier
-- Crée des fichiers `.encrypted` et `.meta`
+- Écrase le fichier original avec le contenu chiffré (garde le même nom)
+- Crée un fichier `.meta` avec les métadonnées de chiffrement
 - Ignore les fichiers Python et les fichiers déjà chiffrés
 
 ### 2. Déchiffrement complet
@@ -226,7 +227,6 @@ Contient les métadonnées de chiffrement pour chaque fichier :
 
 ```json
 {
-  "original_name": "fichier.txt",
   "wrapped_key_ciphertext": "base64...",
   "wrapped_key_nonce": "base64...",
   "wrapped_key_tag": "base64...",
@@ -292,7 +292,8 @@ Le script de test exécute automatiquement :
 
 **Test 1 : Chiffrement de dossier**
 - Chiffre tous les fichiers de `dossier_0/`
-- Crée les fichiers `.encrypted` et `.meta`
+- Écrase chaque fichier avec son contenu chiffré
+- Crée les fichiers `.meta` correspondants
 
 **Test 2 : Déchiffrement complet**
 - Récupère le mot de passe du serveur
