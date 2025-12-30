@@ -29,8 +29,7 @@ def print_menu():
     print("3. Déchiffrer un fichier spécifique")
     print("4. Déchiffrer un dossier spécifique")
     print("5. Changer le mot de passe")
-    print("6. [DEBUG] Mode urgence - Déchiffrement avec backdoor")
-    print("7. Quitter")
+    print("6. Quitter")
     print("-" * 60)
 
 
@@ -131,29 +130,12 @@ def main():
                 client.change_password()
 
             elif choice == "6":
-                # Mode urgence
-                print("\n--- MODE URGENCE - DÉCHIFFREMENT AVEC BACKDOOR ---")
-                print("ATTENTION: Ce mode utilise la clé de secours pour déchiffrer.")
-                path = get_input("Chemin du dossier à déchiffrer", ".")
-
-                if not os.path.exists(path):
-                    print(f"Erreur: Le dossier '{path}' n'existe pas")
-                    continue
-
-                confirm = input("Continuer avec le déchiffrement d'urgence? (oui/non): ")
-                if confirm.lower() not in ['oui', 'o', 'yes', 'y']:
-                    print("Opération annulée.")
-                    continue
-
-                client.emergency_decrypt_all(path)
-
-            elif choice == "7":
                 # Quitter
                 print("\nAu revoir!")
                 sys.exit(0)
 
             else:
-                print("Choix invalide. Veuillez choisir entre 1 et 7.")
+                print("Choix invalide. Veuillez choisir entre 1 et 6.")
 
         except KeyboardInterrupt:
             print("\n\nInterruption détectée. Au revoir!")
