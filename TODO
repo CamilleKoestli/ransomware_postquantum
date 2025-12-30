@@ -10,9 +10,7 @@ AES-GCM 256 : utilisé pour chiffrer les fichiers ET toutes les clés (wrapping)
 - Test déchiffrer un dossier
 - Test déchiffrer tout
 - Test changement de mot de passe
-- Enlever mode urgence
-- venv
-- ✅ Revoir le fonctionnement et l'utilisation de CRYSTALS-Kyber
+- Revoir le fonctionnement et l'utilisation de CRYSTALS-Kyber
 
 Rapport :
 
