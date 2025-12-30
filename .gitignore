@@ -16,3 +16,6 @@ app/dossier_0/dossier_1/fichier_1.1.txt
 app/dossier_0/dossier_1/fichier_1.2.txt
 app/dossier_0/fichier_0.2.txt
 app/dossier_0
+app/test/dossier_0
+app/test/rootkey.bin
+app/dossier_0/fichier_0.1.txt

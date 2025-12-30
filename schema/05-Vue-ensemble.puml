@@ -44,7 +44,6 @@ note bottom of files
     - Clé fichier chiffrée avec RK
       via AES-GCM 256 bits
     - Nonce et tag du fichier
-    - wrapped_key_backdoor pour récupération
 end note
 
 @enduml
