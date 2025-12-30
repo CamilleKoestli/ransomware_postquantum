@@ -16,7 +16,7 @@ client -> client: Dérive Master Key (MK)\navec Argon2 (256 bits)
 client -> client: Génère Root Key (RK)\nCRYSTALS-Kyber (256 bits)
 
 == Chiffrement de la Root Key ==
-client -> client: Chiffre RK avec MK\n(AES-KW 256 bits)
+client -> client: Chiffre RK avec MK\n(AES-GCM 256 bits)
 client -> rootkey: Stocke RK chiffrée\ndans rootkey.bin
 activate rootkey
 
@@ -31,7 +31,7 @@ loop Pour chaque fichier
     client -> client: Chiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce)
 
     client -> client: Obtient le tag d'authentification
-    client -> client: Chiffre (nonce, clé fichier, tag)\navec RK (AES-KW 256 bits)
+    client -> client: Chiffre (nonce, clé fichier, tag)\navec RK (AES-GCM 256 bits)
 
     client -> fs: Écrit fichier chiffré\navec métadonnées chiffrées
     fs --> client: OK
@@ -67,7 +67,7 @@ activate rootkey
 rootkey --> client: RK chiffrée
 deactivate rootkey
 
-client -> client: Déchiffre RK avec MK\n(AES-KW 256 bits)
+client -> client: Déchiffre RK avec MK\n(AES-GCM 256 bits)
 
 == Déchiffrement des fichiers ==
 loop Pour chaque fichier chiffré
@@ -75,7 +75,7 @@ loop Pour chaque fichier chiffré
     activate fs
     fs --> client: Contenu chiffré + métadonnées
 
-    client -> client: Déchiffre (nonce, clé fichier, tag)\navec RK (AES-KW 256 bits)
+    client -> client: Déchiffre (nonce, clé fichier, tag)\navec RK (AES-GCM 256 bits)
 
     client -> client: Déchiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce, tag)
 
@@ -119,7 +119,7 @@ activate rk
 rk --> server: RK
 deactivate rk
 
-server -> server: Unwrap clé fichier avec RK\n(AES-KW 256 bits)
+server -> server: Unwrap clé fichier avec RK\n(AES-GCM 256 bits)
 
 server -> client: Envoie clé déchiffrée\n(nonce, clé fichier, tag)
 deactivate server
@@ -165,7 +165,7 @@ client -> server: Transmet nouveau mot de passe\net paramètres Argon2
 == Rechiffrement de la Root Key ==
 server -> server: Dérive nouvelle MK\navec Argon2
 server -> server: Déchiffre RK\navec ancienne MK
-server -> server: Chiffre RK\navec nouvelle MK\n(AES-KW 256 bits)
+server -> server: Chiffre RK\navec nouvelle MK\n(AES-GCM 256 bits)
 
 server -> client: Envoie nouvelle RK chiffrée
 
@@ -192,7 +192,7 @@ package "Machine Victime" {
         [Module Chiffrement\nAES-GCM 256 bits] as aes
         [Module Dérivation\nArgon2] as argon
         [Module Post-Quantique\nCRYSTALS-Kyber] as kyber
-        [Module Key Wrapping\nAES-KW 256 bits] as kw
+        [Module Chiffrement Authentifié\nAES-GCM 256 bits] as gcm
     }
 
     database "Fichiers" as files
@@ -231,7 +231,7 @@ note bottom of files
     - Tag d'authentification
 
     Tout chiffré avec RK
-    (AES-KW 256 bits)
+    (AES-GCM 256 bits)
 end note
 
 @enduml

@@ -26,7 +26,7 @@ activate rk
 rk --> server: RK
 deactivate rk
 
-server -> server: Unwrap clé fichier avec RK\n(AES-KW 256 bits)
+server -> server: Unwrap clé fichier avec RK\n(AES-GCM 256 bits)
 
 server -> client: Envoie clé déchiffrée\n(nonce, clé fichier, tag)
 deactivate server

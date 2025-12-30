@@ -14,21 +14,21 @@ activate client
 
 client -> fs: Lit métadonnées chiffrées\ndu fichier
 activate fs
-fs --> client: Métadonnées chiffrées\n(nonce, clé fichier, tag)
+fs --> client: Métadonnées\n(wrapped_key: ciphertext, nonce, tag)
 deactivate fs
 
-client -> server: Envoie métadonnées\nchiffrées
+client -> server: Envoie wrapped_key\n(ciphertext, nonce, tag)\net kyber_ciphertext
 activate server
 
 == Déchiffrement de la clé ==
-server -> rk: Récupère RK
+server -> rk: Récupère RK via\nKyber désencapsulation
 activate rk
 rk --> server: RK
 deactivate rk
 
-server -> server: Unwrap clé fichier avec RK\n(AES-KW 256 bits)
+server -> server: Unwrap clé fichier avec RK\n(AES-GCM 256 bits)
 
-server -> client: Envoie clé déchiffrée\n(nonce, clé fichier, tag)
+server -> client: Envoie clé fichier déchiffrée
 deactivate server
 
 == Déchiffrement du fichier ==

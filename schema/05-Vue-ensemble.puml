@@ -4,10 +4,9 @@ title Architecture Globale du Ransomware Post-Quantique
 
 package "Machine Victime" {
     component "Client Ransomware" as client {
-        [Module Chiffrement\nAES-GCM 256 bits] as aes
+        [Module Chiffrement Authentifié\nAES-GCM 256 bits] as aes
         [Module Dérivation\nArgon2] as argon
-        [Module Post-Quantique\nCRYSTALS-Kyber] as kyber
-        [Module Key Wrapping\nAES-KW 256 bits] as kw
+        [Module Post-Quantique\nCRYSTALS-Kyber-1024] as kyber
     }
 
     database "Fichiers" as files
@@ -40,13 +39,12 @@ note right of kyber
 end note
 
 note bottom of files
-    **Métadonnées chiffrées:**
-    - Nonce
-    - Clé fichier (256 bits)
-    - Tag d'authentification
-
-    Tout chiffré avec RK
-    (AES-KW 256 bits)
+    **Métadonnées:**
+    - wrapped_key (ciphertext, nonce, tag)
+    - Clé fichier chiffrée avec RK
+      via AES-GCM 256 bits
+    - Nonce et tag du fichier
+    - wrapped_key_backdoor pour récupération
 end note
 
 @enduml

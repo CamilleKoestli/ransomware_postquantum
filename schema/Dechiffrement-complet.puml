@@ -21,7 +21,7 @@ activate rootkey
 rootkey --> client: RK chiffrée
 deactivate rootkey
 
-client -> client: Déchiffre RK avec MK\n(AES-KW 256 bits)
+client -> client: Déchiffre RK avec MK\n(AES-GCM 256 bits)
 
 == Déchiffrement des fichiers ==
 loop Pour chaque fichier chiffré
@@ -29,7 +29,7 @@ loop Pour chaque fichier chiffré
     activate fs
     fs --> client: Contenu chiffré + métadonnées
 
-    client -> client: Déchiffre (nonce, clé fichier, tag)\navec RK (AES-KW 256 bits)
+    client -> client: Déchiffre (nonce, clé fichier, tag)\navec RK (AES-GCM 256 bits)
 
     client -> client: Déchiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce, tag)
 

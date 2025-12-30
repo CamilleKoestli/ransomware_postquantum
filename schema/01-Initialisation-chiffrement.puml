@@ -13,11 +13,11 @@ activate client
 
 client -> client: Génère mot de passe aléatoire\n(du dictionnaire)
 client -> client: Dérive Master Key (MK)\navec Argon2 (256 bits)
-client -> client: Génère Root Key (RK)\nCRYSTALS-Kyber (256 bits)
+client -> client: Génère Root Key (RK) via\nCRYSTALS-Kyber-1024 encapsulation
 
 == Chiffrement de la Root Key ==
-client -> client: Chiffre RK avec MK\n(AES-KW 256 bits)
-client -> rootkey: Stocke RK chiffrée\ndans rootkey.bin
+client -> client: Chiffre RK avec MK\n(AES-GCM 256 bits)
+client -> rootkey: Stocke RK chiffrée (ciphertext, nonce, tag)\net kyber_ciphertext dans rootkey.bin
 activate rootkey
 
 == Chiffrement des fichiers ==
@@ -31,7 +31,7 @@ loop Pour chaque fichier
     client -> client: Chiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce)
 
     client -> client: Obtient le tag d'authentification
-    client -> client: Chiffre (nonce, clé fichier, tag)\navec RK (AES-KW 256 bits)
+    client -> client: Chiffre la clé fichier avec RK\n(AES-GCM 256 bits)\nobtient: wrapped_key (ciphertext, nonce, tag)
 
     client -> fs: Écrit fichier chiffré\navec métadonnées chiffrées
     fs --> client: OK

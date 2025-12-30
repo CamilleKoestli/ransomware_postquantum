@@ -85,7 +85,7 @@
 
 = Niveau de sécurité
 Niveau de sécurité avec AES 256 bits : 5
-Résistant aux attaques quantiques avec CRYSTALS-Kyber et AES-KW 256 bits
+Résistant aux attaques quantiques avec CRYSTALS-Kyber et AES-GCM 256 bits
 Résistant aux attaques par force brute avec Argon2
 
 Même niveau de sécurité partout
@@ -98,7 +98,7 @@ Même niveau de sécurité partout
 + Mise en place de bonnes pratiques de sécurité pour minimiser les risques de vulnérabilités 
 
 = Gestion des clés
-+ Utilisation d'AES-KW 256 bits pour le chiffrement des clés
++ Utilisation d'AES-GCM 256 bits pour le chiffrement des clés et des fichiers
 + Utilisation d'Argon2 pour la dérivation de clés à partir de mots de passe
 + Utilisation de CRYSTALS-Kyber pour la génération de clés post-quantiques
 
@@ -115,7 +115,7 @@ Le ransomware est composé de deux parties principales : le client et le serveur
 = Description du ransomware
 == Fonctionnalités principales
 - Chiffrement des fichiers avec AES-GCM 256 bits
-- Chiffrement des clés de fichiers et de la Root Key avec AES-KW 256 bits
+- Chiffrement des clés de fichiers et de la Root Key avec AES-GCM 256 bits
 - Dérivation de la Master Key à partir d'un mot de passe avec Argon2
 - Génération de la Root Key avec CRYSTALS-Kyber
 - Stockage sécurisé des informations de chiffrement dans les métadonnées des fichiers
@@ -131,19 +131,20 @@ Le chiffrement se fera au niveau où le ransomware est lancé (dossier ou disque
 
 Le chiffrement des fichiers se fait de la manière suivante :
 - Pour chaque fichier à chiffrer:
-  + On chiffre le nonce, clé du fichier et tag avec la RK avec AES-KW 256 bits.
-  + On stocke le tout dans les métadonnées du fichier.
+  + On chiffre le fichier avec AES-GCM 256 bits.
+  + On chiffre la clé du fichier avec la RK avec AES-GCM 256 bits.
+  + On stocke le ciphertext, nonce et tag de la clé wrappée dans les métadonnées du fichier.
 
 - Pour la Root Key:
-  + On chiffre la RK avec la MK avec AES-KW 256 bits.
-  + On stocke le tout dans un nouveau fichier `rootkey.bin`.
+  + On chiffre la RK avec la MK avec AES-GCM 256 bits.
+  + On stocke le ciphertext, nonce et tag dans un nouveau fichier `rootkey.bin`.
 
 == Paiement de la rançon
 Lors du choix de payer la rançon :
 + Le serveur envoie le mot de passe et les paramètres Argon2 au client.
-+ Le client dérive la clé à partir du mot de passe et des paramètres Argon2, puis déchiffre MK avec AES-KW 256 bits en utilisant cette clé dérivée.
-+ Le client déchiffre chaque fichier avec la MK.
-+ Le client déchiffre chaque fichier AES-GCM en utilisant la clé du fichier, le nonce et le tag stockés dans les métadonnées du fichier.
++ Le client dérive la clé à partir du mot de passe et des paramètres Argon2, puis déchiffre la RK avec AES-GCM 256 bits en utilisant cette clé dérivée.
++ Le client déchiffre chaque clé de fichier avec la RK.
++ Le client déchiffre chaque fichier avec AES-GCM en utilisant la clé du fichier, le nonce et le tag stockés dans les métadonnées du fichier.
 
 == Déchiffrement
 === Déchiffrement de l'ensemble des dossiers et fichiers
@@ -169,13 +170,12 @@ Lors du choix de payer la rançon :
 
 = Implémentation technique
 == Librairies utilisées
-- `pyca/cryptography` pour le chiffrement symétrique (AES-GCM, AES-KW)
+- `pyca/cryptography` pour le chiffrement symétrique (AES-GCM)
 - `pyca/argon2` pour la dérivation de clés avec Argon2
 - `pqcrypto` pour les opérations post-quantiques avec CRYSTALS-Kyber
 
 CRYSTALS-Kyber (ML-KEM-1024) : Utilisé UNIQUEMENT pour générer/échanger la Root Key
-AES-KW 256 : Utilisé pour TOUTES les encapsulations de clés
-AES-GCM 256 : Utilisé pour chiffrer les fichiers
+AES-GCM 256 : Utilisé pour chiffrer les fichiers ET pour l'encapsulation de toutes les clés
 Argon2id : Utilisé pour dériver la Master Key du mot de passe
 
 = Conclusion

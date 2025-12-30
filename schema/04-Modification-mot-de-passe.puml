@@ -22,13 +22,13 @@ client -> server: Transmet nouveau mot de passe\net paramètres Argon2
 
 == Rechiffrement de la Root Key ==
 server -> server: Dérive nouvelle MK\navec Argon2
-server -> server: Déchiffre RK\navec ancienne MK
-server -> server: Chiffre RK\navec nouvelle MK\n(AES-KW 256 bits)
+server -> server: Récupère RK via\nKyber désencapsulation
+server -> server: Chiffre RK\navec nouvelle MK\n(AES-GCM 256 bits)
 
-server -> client: Envoie nouvelle RK chiffrée
+server -> client: Envoie nouvelle RK chiffrée\n(ciphertext, nonce, tag)
 
 == Mise à jour sur le client ==
-client -> rootkey: Remplace ancienne RK chiffrée\npar nouvelle
+client -> rootkey: Remplace ancienne RK chiffrée\npar nouvelle (ciphertext, nonce, tag)
 activate rootkey
 rootkey --> client: OK
 deactivate rootkey

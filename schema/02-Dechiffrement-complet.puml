@@ -16,13 +16,12 @@ activate client
 
 == Déchiffrement de la Root Key ==
 client -> client: Dérive MK avec Argon2\n(mot de passe + paramètres)
-client -> rootkey: Lit RK chiffrée
-client -> rootkey: Lit RK chiffrée
+client -> rootkey: Lit RK chiffrée\n(ciphertext, nonce, tag)
 activate rootkey
 rootkey --> client: RK chiffrée
 deactivate rootkey
 
-client -> client: Déchiffre RK avec MK\n(AES-KW 256 bits)
+client -> client: Déchiffre RK avec MK\n(AES-GCM 256 bits)
 
 == Déchiffrement des fichiers ==
 loop Pour chaque fichier chiffré
@@ -30,7 +29,7 @@ loop Pour chaque fichier chiffré
     activate fs
     fs --> client: Contenu chiffré + métadonnées
 
-    client -> client: Déchiffre (nonce, clé fichier, tag)\navec RK (AES-KW 256 bits)
+    client -> client: Déchiffre la clé fichier avec RK\n(AES-GCM 256 bits)\nà partir de wrapped_key (ciphertext, nonce, tag)
 
     client -> client: Déchiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce, tag)
 
