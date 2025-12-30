@@ -6,3 +6,7 @@ app/dossier_0
 venv/
 *.pyc
 __pycache__/
+
+# Wordlists (exclude original, keep filtered)
+app/src/rockyou.txt
+!app/src/rockyou_filtered.txt

