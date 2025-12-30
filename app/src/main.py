@@ -12,16 +12,12 @@ from client import RansomwareClient
 
 
 def print_banner():
-    """Affiche la bannière du programme"""
-    print("=" * 60)
-    print("     RANSOMWARE POST-QUANTIQUE (Projet éducatif)")
-    print("=" * 60)
+    print("RANSOMWARE POST-QUANTIQUE")
     print()
 
 
 def print_menu():
     """Affiche le menu principal"""
-    print("\n" + "-" * 60)
     print("MENU PRINCIPAL")
     print("-" * 60)
     print("1. Chiffrer un dossier")
@@ -58,10 +54,9 @@ def get_input(prompt: str, default: str = None) -> str:
 
 
 def main():
-    """Fonction principale"""
     print_banner()
 
-    # Initialise le client dans le répertoire courant
+    # Initialise client dans répertoire
     client = RansomwareClient(".")
 
     while True:
@@ -120,7 +115,7 @@ def main():
                 client.decrypt_folder(folder_path)
 
             elif choice == "5":
-                # Changer le mot de passe
+                # Changer mdp
                 print("\n--- CHANGEMENT DE MOT DE PASSE ---")
                 confirm = input("Voulez-vous vraiment changer le mot de passe? (oui/non): ")
                 if confirm.lower() not in ['oui', 'o', 'yes', 'y']:
@@ -135,14 +130,14 @@ def main():
                 sys.exit(0)
 
             else:
-                print("Choix invalide. Veuillez choisir entre 1 et 6.")
+                print("Choix invalide.")
 
         except KeyboardInterrupt:
-            print("\n\nInterruption détectée. Au revoir!")
+            print("\n\nInterruption. Au revoir!")
             sys.exit(0)
 
         except Exception as e:
-            print(f"\n[ERREUR] Une erreur est survenue: {e}")
+            print(f"\nERREUR : {e}")
             import traceback
             traceback.print_exc()
 
