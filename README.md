@@ -14,7 +14,7 @@ Implémentation d'un système de ransomware utilisant des techniques cryptograph
 - **Encapsulation des clés** : AES-GCM 256 bits
 - **Dérivation de clés** : Argon2id
 - **Génération de clés** : CRYSTALS-Kyber-1024 (ML-KEM)
-- **Génération de mots de passe** : rockyou_filtered.txt
+- **Génération de mots de passe** : rockyou.txt (filtrage à la volée)
 
 ## Architecture
 
@@ -26,7 +26,7 @@ app/
 │   ├── config.py               # Configuration et constantes
 │   ├── crypto_utils.py         # Utilitaires cryptographiques
 │   ├── wordlist.py             # Génération de mots de passe
-│   ├── rockyou_filtered.txt    # Wordlist filtrée
+│   ├── rockyou.txt             # Wordlist (à télécharger, voir Installation)
 │   ├── server.py               # Module serveur (gestion des clés)
 │   ├── client.py               # Module client (chiffrement/déchiffrement)
 │   ├── main.py                 # Interface utilisateur interactive
@@ -104,6 +104,21 @@ pip install -r app/src/requirements.txt
 # Pour désactiver l'environnement virtuel quand vous avez terminé:
 deactivate
 ```
+
+### Télécharger la wordlist rockyou.txt
+
+Le projet utilise la wordlist rockyou.txt pour générer des mots de passe. Téléchargez-la et placez-la dans `app/src/` :
+
+```bash
+# Télécharger rockyou.txt
+cd app/src
+wget https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt
+
+# Ou avec curl
+curl -L -o rockyou.txt https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt
+```
+
+**Note:** Le fichier rockyou.txt fait ~134 MB. Le code filtre automatiquement les mots (4-10 caractères, alphanumériques) lors du chargement.
 
 ### Installation globale (non recommandé)
 
