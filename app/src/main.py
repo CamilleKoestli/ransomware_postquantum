@@ -67,7 +67,7 @@ def main():
         try:
             if choice == "1":
                 # Chiffrer un dossier
-                print("\n--- CHIFFREMENT D'UN DOSSIER ---")
+                print("\nCHIFFREMENT D'UN DOSSIER")
                 path = get_input("Chemin du dossier à chiffrer", ".")
 
                 if not os.path.exists(path):
@@ -83,7 +83,7 @@ def main():
 
             elif choice == "2":
                 # Déchiffrer tout
-                print("\n--- DÉCHIFFREMENT COMPLET ---")
+                print("\nDÉCHIFFREMENT COMPLET")
                 path = get_input("Chemin du dossier à déchiffrer", ".")
 
                 if not os.path.exists(path):
@@ -94,7 +94,7 @@ def main():
 
             elif choice == "3":
                 # Déchiffrer un fichier
-                print("\n--- DÉCHIFFREMENT D'UN FICHIER ---")
+                print("\nDÉCHIFFREMENT D'UN FICHIER")
                 file_path = get_input("Chemin du fichier à déchiffrer")
 
                 if not file_path:
@@ -105,7 +105,7 @@ def main():
 
             elif choice == "4":
                 # Déchiffrer un dossier
-                print("\n--- DÉCHIFFREMENT D'UN DOSSIER ---")
+                print("\nDÉCHIFFREMENT D'UN DOSSIER")
                 folder_path = get_input("Chemin du dossier à déchiffrer", ".")
 
                 if not os.path.exists(folder_path):
@@ -116,7 +116,7 @@ def main():
 
             elif choice == "5":
                 # Changer mdp
-                print("\n--- CHANGEMENT DE MOT DE PASSE ---")
+                print("\nCHANGEMENT DE MOT DE PASSE")
                 confirm = input("Voulez-vous vraiment changer le mot de passe? (oui/non): ")
                 if confirm.lower() not in ['oui', 'o', 'yes', 'y']:
                     print("Opération annulée.")
@@ -126,14 +126,14 @@ def main():
 
             elif choice == "6":
                 # Quitter
-                print("\nAu revoir!")
+                print("\nQuitter")
                 sys.exit(0)
 
             else:
                 print("Choix invalide.")
 
         except KeyboardInterrupt:
-            print("\n\nInterruption. Au revoir!")
+            print("\n\nStop.")
             sys.exit(0)
 
         except Exception as e:
