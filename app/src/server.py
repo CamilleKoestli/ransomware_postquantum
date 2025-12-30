@@ -35,12 +35,12 @@ class RansomwareServer:
             - password: Mot de passe généré
             - salt: Salt pour Argon2
             - argon2_params: Paramètres Argon2
-            - kyber_public_key: Clé publique Kyber-1024
+            - kyber_public_key: Clé publique Kyber
         """
         print("[SERVEUR] Initialisation du serveur...")
 
         # Génère la paire de clés Kyber
-        print("[SERVEUR] Génération de la paire de clés Kyber-1024...")
+        print("[SERVEUR] Génération de la paire de clés Kyber...")
         self.kyber_public_key, self.kyber_secret_key = crypto_utils.generate_kyber_keypair()
 
         # Génère le mot de passe aléatoire

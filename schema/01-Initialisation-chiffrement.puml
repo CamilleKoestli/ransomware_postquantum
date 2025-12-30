@@ -13,7 +13,7 @@ activate client
 
 client -> client: Génère mot de passe aléatoire\n(du dictionnaire)
 client -> client: Dérive Master Key (MK)\navec Argon2 (256 bits)
-client -> client: Génère Root Key (RK) via\nCRYSTALS-Kyber-1024 encapsulation
+client -> client: Génère Root Key (RK) via\nCRYSTALS-Kyber encapsulation
 
 == Chiffrement de la Root Key ==
 client -> client: Chiffre RK avec MK\n(AES-GCM 256 bits)

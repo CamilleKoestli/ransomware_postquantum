@@ -6,7 +6,7 @@ package "Machine Victime" {
     component "Client Ransomware" as client {
         [Module Chiffrement Authentifié\nAES-GCM 256 bits] as aes
         [Module Dérivation\nArgon2] as argon
-        [Module Post-Quantique\nCRYSTALS-Kyber-1024] as kyber
+        [Module Post-Quantique\nCRYSTALS-Kyber] as kyber
     }
 
     database "Fichiers" as files

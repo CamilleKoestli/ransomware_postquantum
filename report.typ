@@ -124,7 +124,7 @@ Le ransomware est composé de deux parties principales : le client et le serveur
 
 == Lancement du ransomware
 + On génère une Master Key (MK) dérivée avec Argon2 à partir d'un mot de passe aléatoire du dictionnaire rockyou.txt.
-+ On génère la Root Key (RK) de 256 bits via encapsulation CRYSTALS-Kyber-1024.
++ On génère la Root Key (RK) de 256 bits via encapsulation CRYSTALS-Kyber.
 
 == Chiffrement des fichiers et de la Root Key
 Le chiffrement se fera au niveau où le ransomware est lancé (dossier ou disque entier), sans prendre le ransomware dans le chiffrement et les dossiers au dessus.
@@ -174,7 +174,7 @@ Lors du choix de payer la rançon :
 - `pyca/argon2` pour la dérivation de clés avec Argon2
 - `pqcrypto` pour les opérations post-quantiques avec CRYSTALS-Kyber
 
-CRYSTALS-Kyber (ML-KEM-1024) : Utilisé UNIQUEMENT pour générer/échanger la Root Key
+CRYSTALS-Kyber (ML-KEM-1024) : Utilisé seulement pour générer/échanger la Root Key
 AES-GCM 256 : Utilisé pour chiffrer les fichiers ET pour l'encapsulation de toutes les clés
 Argon2id : Utilisé pour dériver la Master Key du mot de passe
 

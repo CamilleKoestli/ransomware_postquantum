@@ -183,7 +183,7 @@ def unwrap_key_aes_gcm(ciphertext: bytes, wrapping_key: bytes, nonce: bytes, tag
 
 def generate_kyber_keypair() -> Tuple[bytes, bytes]:
     """
-    Génère une paire de clés CRYSTALS-Kyber-1024
+    Génère une paire de clés CRYSTALS-Kyber
 
     Returns:
         Tuple (public_key, secret_key)
@@ -196,7 +196,7 @@ def generate_kyber_keypair() -> Tuple[bytes, bytes]:
 
 def kyber_encapsulate(public_key: bytes) -> Tuple[bytes, bytes]:
     """
-    Encapsule un secret partagé avec CRYSTALS-Kyber-1024
+    Encapsule un secret partagé avec CRYSTALS-Kyber
 
     Args:
         public_key: Clé publique Kyber
@@ -217,7 +217,7 @@ def kyber_encapsulate(public_key: bytes) -> Tuple[bytes, bytes]:
 
 def kyber_decapsulate(secret_key: bytes, ciphertext: bytes) -> bytes:
     """
-    Désencapsule un secret partagé avec CRYSTALS-Kyber-1024
+    Désencapsule un secret partagé avec CRYSTALS-Kyber
 
     Args:
         secret_key: Clé secrète Kyber
@@ -236,17 +236,3 @@ def kyber_decapsulate(secret_key: bytes, ciphertext: bytes) -> bytes:
         raise ValueError(f"Le secret partagé Kyber doit faire {config.KEY_SIZE} octets, obtenu: {len(shared_secret)}")
 
     return shared_secret
-
-
-# Fonction obsolète - la Root Key est maintenant générée via Kyber
-# def generate_root_key() -> bytes:
-#     """
-#     [OBSOLÈTE] Génère une Root Key (RK) de 256 bits
-#
-#     Note: Cette fonction est obsolète. Utilisez kyber_encapsulate() à la place.
-#     La Root Key est maintenant générée via CRYSTALS-Kyber-1024.
-#
-#     Returns:
-#         Root Key de 32 octets
-#     """
-#     return generate_random_key(config.KEY_SIZE)

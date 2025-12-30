@@ -91,7 +91,7 @@ class RansomwareClient:
         )
 
         # 3. Génère la Root Key via Kyber
-        print("[CLIENT] Génération de la Root Key avec Kyber-1024...")
+        print("[CLIENT] Génération de la Root Key avec Kyber...")
         kyber_ciphertext, root_key = crypto_utils.kyber_encapsulate(kyber_public_key)
 
         # 4. Encapsule la Root Key avec la Master Key

@@ -13,7 +13,7 @@ Implémentation d'un système de ransomware utilisant des techniques cryptograph
 - **Chiffrement des fichiers** : AES-GCM 256 bits
 - **Encapsulation des clés** : AES-GCM 256 bits
 - **Dérivation de clés** : Argon2id
-- **Génération de clés** : CRYSTALS-Kyber-1024 (ML-KEM)
+- **Génération de clés** : CRYSTALS-Kyber (ML-KEM)
 - **Génération de mots de passe** : rockyou.txt (filtrage à la volée)
 
 ## Architecture
@@ -26,7 +26,7 @@ app/
 │   ├── config.py               # Configuration et constantes
 │   ├── crypto_utils.py         # Utilitaires cryptographiques
 │   ├── wordlist.py             # Génération de mots de passe
-│   ├── rockyou.txt             # Wordlist (à télécharger, voir Installation)
+│   ├── rockyou.txt             # Wordlist pour les mots de passe
 │   ├── server.py               # Module serveur (gestion des clés)
 │   ├── client.py               # Module client (chiffrement/déchiffrement)
 │   ├── main.py                 # Interface utilisateur interactive
@@ -40,18 +40,18 @@ app/
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                         SERVEUR                             │
-│  - Génère le mot de passe aléatoire                        │
-│  - Génère la paire de clés Kyber-1024                     │
-│  - Gère les demandes de déchiffrement                      │
+│  - Génère le mot de passe aléatoire                         │
+│  - Génère la paire de clés Kyber                            │
+│  - Gère les demandes de déchiffrement                       │
 └─────────────────────────────────────────────────────────────┘
                             ▲  ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                         CLIENT                              │
-│  - Dérive la Master Key (MK) avec Argon2                   │
-│  - Génère la Root Key (RK) avec Kyber-1024                │
-│  - Chiffre/déchiffre les fichiers avec AES-GCM             │
-│  - Encapsule les clés avec AES-GCM                         │
-│  - Stocke les métadonnées dans des fichiers .meta         │
+│  - Dérive la Master Key (MK) avec Argon2                    │
+│  - Génère la Root Key (RK) avec Kyber                       │
+│  - Chiffre/déchiffre les fichiers avec AES-GCM              │
+│  - Encapsule les clés avec AES-GCM                          │
+│  - Stocke les métadonnées dans des fichiers .meta           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -59,7 +59,7 @@ app/
 
 1. Le serveur génère un mot de passe aléatoire depuis rockyou.txt (ex: "dragon-shadow-matrix-secret")
 2. Le client dérive une Master Key (MK) à partir du mot de passe avec Argon2
-3. Le serveur génère une paire de clés Kyber-1024 (publique/secrète)
+3. Le serveur génère une paire de clés Kyber (publique/secrète)
 4. Le client génère la Root Key (RK) via encapsulation Kyber avec la clé publique
 5. La RK est encapsulée avec la MK (AES-GCM) et stockée dans `rootkey.bin`
 6. Pour chaque fichier :
@@ -265,7 +265,7 @@ hash_len = 32          # 256 bits
 - ✅ Utilisation d'algorithmes standards et éprouvés (AES-GCM, Argon2, Kyber)
 - ✅ Clés de 256 bits partout (niveau de sécurité : 128 bits post-quantique)
 - ✅ Argon2id pour la dérivation de clés (résistant au GPU/ASIC)
-- ✅ CRYSTALS-Kyber-1024 pour la génération de la Root Key (post-quantique)
+- ✅ CRYSTALS-Kyber pour la génération de la Root Key (post-quantique)
 - ✅ AES-GCM pour le chiffrement et l'encapsulation (AEAD)
 - ✅ Génération de clés avec `secrets` (CSPRNG)
 - ✅ Clé unique par fichier (isolation)
