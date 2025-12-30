@@ -10,3 +10,9 @@ __pycache__/
 # Wordlists (exclude original, keep filtered)
 app/src/rockyou.txt
 !app/src/rockyou_filtered.txt
+app/dossier_0
+app/dossier_0/dossier_1
+app/dossier_0/dossier_1/fichier_1.1.txt
+app/dossier_0/dossier_1/fichier_1.2.txt
+app/dossier_0/fichier_0.2.txt
+app/dossier_0

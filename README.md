@@ -14,6 +14,7 @@ Implémentation d'un système de ransomware utilisant des techniques cryptograph
 - **Encapsulation des clés** : AES-GCM 256 bits
 - **Dérivation de clés** : Argon2id
 - **Génération de clés** : CRYSTALS-Kyber-1024 (ML-KEM)
+- **Génération de mots de passe** : rockyou_filtered.txt (~12.5M mots, 111 MB)
 
 ## Architecture
 
@@ -21,15 +22,17 @@ Implémentation d'un système de ransomware utilisant des techniques cryptograph
 
 ```
 app/
-├── config.py           # Configuration et constantes
-├── crypto_utils.py     # Utilitaires cryptographiques
-├── wordlist.py         # Génération de mots de passe
-├── server.py           # Module serveur (gestion des clés)
-├── client.py           # Module client (chiffrement/déchiffrement)
-├── main.py             # Interface utilisateur interactive
-├── test.py             # Tests automatisés de base
-├── test_advanced.py    # Tests avancés
-└── requirements.txt    # Dépendances Python
+├── src/
+│   ├── config.py               # Configuration et constantes
+│   ├── crypto_utils.py         # Utilitaires cryptographiques
+│   ├── wordlist.py             # Génération de mots de passe
+│   ├── rockyou_filtered.txt    # Wordlist filtrée (12.5M mots, 111 MB)
+│   ├── server.py               # Module serveur (gestion des clés)
+│   ├── client.py               # Module client (chiffrement/déchiffrement)
+│   ├── main.py                 # Interface utilisateur interactive
+│   └── requirements.txt        # Dépendances Python
+└── test/
+    └── test.py                 # Tests automatisés
 ```
 
 ### Architecture cryptographique
@@ -40,7 +43,6 @@ app/
 │  - Génère le mot de passe aléatoire                        │
 │  - Génère la paire de clés Kyber-1024                     │
 │  - Gère les demandes de déchiffrement                      │
-│  - Stocke la clé de secours (backdoor)                     │
 └─────────────────────────────────────────────────────────────┘
                             ▲  ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -55,7 +57,7 @@ app/
 
 ### Flux de chiffrement
 
-1. Le serveur génère un mot de passe aléatoire (ex: "pomme-soleil-chat-bleu")
+1. Le serveur génère un mot de passe aléatoire depuis rockyou_filtered.txt (ex: "dragon-shadow-matrix-secret")
 2. Le client dérive une Master Key (MK) à partir du mot de passe avec Argon2
 3. Le serveur génère une paire de clés Kyber-1024 (publique/secrète)
 4. Le client génère la Root Key (RK) via encapsulation Kyber avec la clé publique
@@ -132,8 +134,7 @@ Menu disponible :
 3. Déchiffrer un fichier spécifique
 4. Déchiffrer un dossier spécifique
 5. Changer le mot de passe
-6. Mode urgence (backdoor)
-7. Quitter
+6. Quitter
 
 ### Tests automatisés
 
@@ -144,11 +145,8 @@ source venv/bin/activate
 # Aller dans le répertoire des tests
 cd app/test
 
-# Tests de base (chiffrement + déchiffrement)
+# Lancer tous les tests
 python test.py
-
-# Tests avancés (changement de mot de passe, déchiffrement partiel, mode urgence)
-python test_advanced.py
 ```
 
 ## Fonctionnalités
@@ -185,14 +183,6 @@ Permet de changer le mot de passe sans re-chiffrer tous les fichiers :
 - Re-encapsule la Root Key avec la nouvelle Master Key
 - Met à jour `rootkey.bin`
 
-### 5. Mode urgence (backdoor)
-
-Déchiffre tous les fichiers en cas de problème :
-
-- Utilise une clé de secours générée au démarrage
-- Permet de récupérer les fichiers même si la MK/RK est corrompue
-- À usage de debug/récupération uniquement
-
 ## Fichiers générés
 
 ### rootkey.bin
@@ -225,9 +215,6 @@ Contient les métadonnées de chiffrement pour chaque fichier :
   "wrapped_key_ciphertext": "base64...",
   "wrapped_key_nonce": "base64...",
   "wrapped_key_tag": "base64...",
-  "wrapped_key_backdoor_ciphertext": "base64...",
-  "wrapped_key_backdoor_nonce": "base64...",
-  "wrapped_key_backdoor_tag": "base64...",
   "nonce": "base64...",
   "tag": "base64..."
 }
@@ -271,14 +258,13 @@ hash_len = 32          # 256 bits
 ### Limitations (contexte éducatif)
 
 - ⚠️ Communication client-serveur simulée localement (pas de réseau)
-- ⚠️ Backdoor pour récupération (non recommandé en production)
 - ⚠️ Fichiers originaux non supprimés (pour faciliter les tests)
 - ⚠️ Pas de vérification d'intégrité de `rootkey.bin`
 - ⚠️ Stockage des métadonnées en clair (augmente la taille des données)
 
 ## Tests
 
-### Test 1 : Chiffrement et déchiffrement de base
+Pour lancer tous les tests :
 
 ```bash
 # Activer le venv
@@ -287,33 +273,25 @@ $ cd app/test
 $ python test.py
 ```
 
-Résultat attendu :
+Le script de test exécute automatiquement :
 
-- 4 fichiers chiffrés dans `dossier_0/`
-- Création de `.encrypted` et `.meta`
-- Déchiffrement réussi avec restauration complète
+**Test 1 : Chiffrement de dossier**
+- Chiffre tous les fichiers de `dossier_0/`
+- Crée les fichiers `.encrypted` et `.meta`
 
-### Test 2 : Changement de mot de passe
+**Test 2 : Déchiffrement complet**
+- Récupère le mot de passe du serveur
+- Déchiffre tous les fichiers
+- Restaure les fichiers originaux
 
-```bash
-$ source venv/bin/activate
-$ cd app/test
-$ python test_advanced.py
-```
+**Test 3 : Changement de mot de passe**
+- Génère un nouveau mot de passe
+- Re-encapsule la Root Key
+- Vérifie que la nouvelle clé fonctionne
 
-Vérifie que :
-
-- Le nouveau mot de passe fonctionne
-- La Root Key reste valide
-- Le déchiffrement fonctionne toujours
-
-### Test 3 : Déchiffrement partiel
-
-Vérifie le déchiffrement d'un seul fichier sans le mot de passe complet.
-
-### Test 4 : Mode urgence
-
-Vérifie que la backdoor permet de récupérer les fichiers en cas de problème.
+**Test 4 : Déchiffrement partiel**
+- Déchiffre un seul fichier spécifique
+- Utilise la désencapsulation côté serveur
 
 ## Contexte académique
 
