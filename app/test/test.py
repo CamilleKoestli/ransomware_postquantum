@@ -3,9 +3,14 @@
 Tests: chiffrement, déchiffrement complet, changement de mot de passe, déchiffrement fichier/dossier spécifique
 """
 
+import sys
+import os
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 from client import RansomwareClient
 from server import server
-import os
 
 client = RansomwareClient(".")
 
@@ -33,6 +38,5 @@ client.encrypt_directory("dossier_0")
 # Déchiffre un seul fichier spécifique
 client.decrypt_file("dossier_0/fichier1.txt")
 
-print("\n" + "=" * 70)
+print("\n" + "-" * 70)
 print("TESTS OK")
-print("=" * 70)

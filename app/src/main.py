@@ -19,14 +19,14 @@ def print_banner():
 def print_menu():
     """Affiche le menu principal"""
     print("MENU PRINCIPAL")
-    print("-" * 60)
+    print("-" * 70)
     print("1. Chiffrer un dossier")
     print("2. Déchiffrer tout (avec mot de passe serveur)")
     print("3. Déchiffrer un fichier spécifique")
     print("4. Déchiffrer un dossier spécifique")
     print("5. Changer le mot de passe")
     print("6. Quitter")
-    print("-" * 60)
+    print("-" * 70)
 
 
 def get_input(prompt: str, default: str = None) -> str:
