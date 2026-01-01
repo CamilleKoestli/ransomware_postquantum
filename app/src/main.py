@@ -18,10 +18,10 @@ def print_banner():
 
 def print_menu():
     """Affiche le menu principal"""
-    print("MENU PRINCIPAL")
+    print("\nMENU PRINCIPAL")
     print("-" * 70)
     print("1. Chiffrer un dossier")
-    print("2. Déchiffrer tout (avec mot de passe serveur)")
+    print("2. Déchiffrer tout")
     print("3. Déchiffrer un fichier spécifique")
     print("4. Déchiffrer un dossier spécifique")
     print("5. Changer le mot de passe")
@@ -67,7 +67,7 @@ def main():
             if choice == "1":
                 # Chiffrer un dossier
                 print("\nCHIFFREMENT D'UN DOSSIER")
-                path = get_input("Chemin du dossier à chiffrer", ".")
+                path = get_input("Chemin du dossier à chiffrer")
 
                 if not os.path.exists(path):
                     print(f"Erreur : Le dossier '{path}' n'existe pas")
@@ -78,7 +78,7 @@ def main():
             elif choice == "2":
                 # Déchiffrer tout
                 print("\nDÉCHIFFREMENT COMPLET")
-                path = get_input("Chemin du dossier à déchiffrer", ".")
+                path = get_input("Chemin du dossier à déchiffrer")
 
                 if not os.path.exists(path):
                     print(f"Erreur: Le dossier '{path}' n'existe pas")
@@ -100,7 +100,7 @@ def main():
             elif choice == "4":
                 # Déchiffrer un dossier
                 print("\nDÉCHIFFREMENT D'UN DOSSIER")
-                folder_path = get_input("Chemin du dossier à déchiffrer", ".")
+                folder_path = get_input("Chemin du dossier à déchiffrer")
 
                 if not os.path.exists(folder_path):
                     print(f"Erreur : Le dossier '{folder_path}' n'existe pas")
@@ -120,10 +120,10 @@ def main():
                 sys.exit(0)
 
             else:
-                print("Choix invalide.")
+                print("Choix invalide")
 
         except KeyboardInterrupt:
-            print("\n\nStop.")
+            print("\n\nStop")
             sys.exit(0)
 
         except Exception as e:
