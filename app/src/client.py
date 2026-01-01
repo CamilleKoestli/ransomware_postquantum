@@ -70,7 +70,7 @@ class RansomwareClient:
         """
         target_path = Path(path).resolve()
 
-        print(f"\n[CLT] Démarrage du chiffrement de: {target_path}")
+        print(f"\n[CLT] Démarrage du chiffrement de {target_path}")
 
         # Initialise serveur et récupère credentials
         print("[CLT] Initialisation au serveur")
@@ -240,7 +240,7 @@ class RansomwareClient:
                 except Exception as e:
                     print(f"  [ERR] Erreur déchiffrement de {filename}: {e}")
 
-        print(f"\n[CLT] Déchiffrement terminé: {decrypted_count} fichier(s) déchiffré(s)")
+        print(f"\n[CLT] Déchiffrement terminé : {decrypted_count} fichier(s) déchiffré(s)")
 
     def _decrypt_file_with_rk(self, encrypted_path: Path, meta_path: Path, root_key: bytes) -> None:
         """
