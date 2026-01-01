@@ -4,13 +4,11 @@ Tests: chiffrement, déchiffrement complet, changement de mot de passe, déchiff
 """
 
 import sys
-import os
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from client import RansomwareClient
-from server import server
 
 client = RansomwareClient(".")
 
