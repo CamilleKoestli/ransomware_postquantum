@@ -130,7 +130,7 @@ class RansomwareServer:
         # Récupère RK
         root_key = crypto_utils.kyber_decapsulate(self.kyber_secret_key, kyber_ciphertext)
 
-        # Dérive la nouvelle Master Key
+        # Dérive new MK
         print("[SVR] Dérivation de la nouvelle MK")
         new_master_key = crypto_utils.derive_key_argon2(
             password=new_password,
@@ -138,11 +138,11 @@ class RansomwareServer:
             **new_argon2_params
         )
 
-        # Re-encapsule la RK avec la nouvelle MK
+        # Re-encapsule RK avec new MK
         print("[SVR] Re-encapsule RK")
         wrapped_rk_ciphertext, wrapped_rk_nonce, wrapped_rk_tag = crypto_utils.wrap_key_aes_gcm(root_key, new_master_key)
 
-        # Met à jour l'état du serveur
+        # Màj état serveur
         self.password = new_password
         self.salt = new_salt
         self.argon2_params = new_argon2_params
