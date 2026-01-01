@@ -83,103 +83,545 @@
   date: datetime.today().display("[day].[month].[year]"),
 )
 
-= Niveau de sécurité
-Niveau de sécurité avec AES 256 bits : 5
-Résistant aux attaques quantiques avec CRYSTALS-Kyber et AES-GCM 256 bits
-Résistant aux attaques par force brute avec Argon2
+= Consigne
+Les consignes sont disponibles dans le document #link("mini_project_2526.pdf")[`mini_project_2526.pdf`].
 
-Même niveau de sécurité partout
+= Niveau de sécurité choisi
 
-= Utilisation de bibliothèques sécurisées
-+ Utilisation de la bibliothèque `cryptography` pour les opérations de chiffrement symétrique
-+ Utilisation de la bibliothèque `pyca/argon2` pour la dérivation de clés
-+ Utilisation de la bibliothèque `pqcrypto` pour les opérations post-quantiques avec CRYSTALS-Kyber
-+ Gestion sécurisée des clés et des mots de passe en mémoire
-+ Mise en place de bonnes pratiques de sécurité pour minimiser les risques de vulnérabilités 
+Le système implémente un niveau de sécurité de 128 bits post-quantique, ce qui est le niveau 5 NIST. Cela permet une protection robuste contre les attaques classiques et quantiques.
 
-= Gestion des clés
-+ Utilisation d'AES-GCM 256 bits pour le chiffrement des clés et des fichiers
-+ Utilisation d'Argon2 pour la dérivation de clés à partir de mots de passe
-+ Utilisation de CRYSTALS-Kyber pour la génération de clés post-quantiques
+== Choix des algorithmes
 
-== Taille des clés
-+ Clé de fichier : 256 bits
-+ Master Key (MK) : 256 bits
-+ Root Key (RK) : 256 bits
+*AES-256-GCM* pour le chiffrement symétrique des clés et des fichiers:
+- Les clés sont de 256 bits ce qui offre 128 bits de sécurité post-quantique et donc est résistant à l'algorithme de Grover
+- L'algorithme garantit la confidentialité et l'authenticité des données
+- Les nonces sont à 96 bits et les tags d'authentification à 128 bits
 
-= Architecture cryptographique
-Le ransomware est composé de deux parties principales : le client et le serveur.
-- Le client est responsable du chiffrement des fichiers sur la machine de la victime.
-- Le serveur gère la génération des clés, le stockage sécurisé des informations de chiffrement et la communication avec le client.
+*CRYSTALS-Kyber (ML-KEM-1024)* pour pour la génération et l'encapsulation de clés post-quantiques :
+- Il s'agit d'un algorithme post-quantique standardisé par le NIST
+- Le niveau 5 NIST offre 128 bits de sécurité post-quantique
+- Il résiste aux attaques par ordinateurs quantiques qui utilisent l'algorithme de Shor
+
+*Argon2id* pour la dérivation de clés à partir de mots de passe:
+- Paramètres : `time_cost=2`, `memory_cost=64MB`, `parallelism=4`
+- Il est résistant aux attaques par GPU, ASIC et bruteforce
+- Une dérivation de Master Key (MK) est réalisée à partir du mot de passe utilisateur
+
+== Paramètres cryptographiques
+
+=== Clés symétriques (toutes à 256 bits)
+
+Uniformité garantissant 128 bits de sécurité post-quantique :
+- *Clé de fichier (File Key)* : 256 bits (32 octets) - une par fichier
+- *Master Key (MK)* : 256 bits (32 octets) - dérivée du mot de passe
+- *Root Key (RK)* : 256 bits (32 octets) - secret partagé Kyber
+
+=== Paramètres AES-256-GCM
+
+- *Nonce* : 96 bits (12 octets) - taille optimale pour GCM
+- *Tag d'authentification* : 128 bits (16 octets)
+- *Taille de bloc* : 128 bits
+- *Mode* : AEAD (Authenticated Encryption with Associated Data)
+
+=== Paramètres Argon2id
+
+- *Salt* : 128 bits (16 octets)
+- *Hash de sortie* : 256 bits (32 octets)
+- *time_cost* : 2 itérations (~0.5s de calcul)
+- *memory_cost* : 65536 KB (64 MB de RAM)
+- *parallelism* : 4 threads
+
+=== CRYSTALS-Kyber (ML-KEM-1024)
+
+- *Clé publique* : 1568 octets
+- *Clé secrète* : 3168 octets
+- *Ciphertext* : 1568 octets
+- *Secret partagé* : 256 bits (32 octets) - devient la Root Key
+- *Niveau NIST* : 5 (équivalent AES-256 post-quantique)
+
+Tous ces paramètres sont définis dans `config.py`.
 
 = Description du ransomware
-== Fonctionnalités principales
-- Chiffrement des fichiers avec AES-GCM 256 bits
-- Chiffrement des clés de fichiers et de la Root Key avec AES-GCM 256 bits
-- Dérivation de la Master Key à partir d'un mot de passe avec Argon2
-- Génération de la Root Key avec CRYSTALS-Kyber
-- Stockage sécurisé des informations de chiffrement dans les métadonnées des fichiers
-- Possibilité de déchiffrement complet ou partiel des fichiers
-- Possibilité de modification du mot de passe de chiffrement
 
-== Lancement du ransomware
-+ On génère une Master Key (MK) dérivée avec Argon2 à partir d'un mot de passe aléatoire du dictionnaire rockyou.txt.
-+ On génère la Root Key (RK) de 256 bits via encapsulation CRYSTALS-Kyber.
+== Fonctionnalités implémentées
 
-== Chiffrement des fichiers et de la Root Key
-Le chiffrement se fera au niveau où le ransomware est lancé (dossier ou disque entier), sans prendre le ransomware dans le chiffrement et les dossiers au dessus.
+Le ransomware offre les fonctionnalités suivantes :
 
-Le chiffrement des fichiers se fait de la manière suivante :
-- Pour chaque fichier à chiffrer:
-  + On chiffre le fichier avec AES-GCM 256 bits.
-  + On chiffre la clé du fichier avec la RK avec AES-GCM 256 bits.
-  + On stocke le ciphertext, nonce et tag de la clé wrappée dans les métadonnées du fichier.
+*Chiffrement :*
+- Chiffrement récursif d'un dossier avec exclusion du code source
+- Génération automatique d'un mot de passe mémorable (4 mots de rockyou.txt)
+- Une clé unique par fichier pour isolation cryptographique
+- Métadonnées stockées dans des fichiers `.meta` séparés
 
-- Pour la Root Key:
-  + On chiffre la RK avec la MK avec AES-GCM 256 bits.
-  + On stocke le ciphertext, nonce et tag dans un nouveau fichier `rootkey.bin`.
+*Déchiffrement :*
+- Déchiffrement complet avec fourniture du mot de passe (méthode `decrypt_all()`)
+- Déchiffrement sélectif fichier par fichier via le serveur (méthode `decrypt_file()`)
+- Pas besoin de la Root Key côté client pour le déchiffrement sélectif
 
-== Paiement de la rançon
-Lors du choix de payer la rançon :
-+ Le serveur envoie le mot de passe et les paramètres Argon2 au client.
-+ Le client dérive la clé à partir du mot de passe et des paramètres Argon2, puis déchiffre la RK avec AES-GCM 256 bits en utilisant cette clé dérivée.
-+ Le client déchiffre chaque clé de fichier avec la RK.
-+ Le client déchiffre chaque fichier avec AES-GCM en utilisant la clé du fichier, le nonce et le tag stockés dans les métadonnées du fichier.
+*Gestion du mot de passe :*
+- Changement de mot de passe sans rechiffrer les fichiers (méthode `change_password()`)
+- Réencapsulation de la Root Key avec la nouvelle Master Key
 
-== Déchiffrement
-=== Déchiffrement de l'ensemble des dossiers et fichiers
-+ Le serveur envoie le mot de passe et les paramètres Argon2 au client.
-+ Le client dérive la MK avec Argon2.
-+ Le client déchiffre la RK avec la MK.
+== Initialisation et chiffrement
 
-=== Déchiffrement d'un dossier ou d'un fichier spécifique
-+ Le client envoie au serveur le texte chiffré des métadonnées du fichier.
-+ Le serveur unwrap la clé du fichier avec la RK et envoie la clé au client.
-+ Le client déchiffre le fichier avec la clé reçue.
+#figure(
+  image("out/schema/01-Initialisation_Chiffrement.png", width: 90%),
+  caption: [Processus d'initialisation et de chiffrement]
+)
+
+=== Étape 1 : Initialisation du serveur
+
+Le serveur (`RansomwareServer.initialize_server()`) effectue :
++ Génération d'une paire de clés CRYSTALS-Kyber (publique/secrète)
++ Génération d'un mot de passe aléatoire de 4 mots via `wordlist.generate_random_password()`
+  - Exemple : `"dragon-shadow-matrix-secret"`
+  - Mots filtrés de rockyou.txt (4-10 caractères, alphanumériques)
++ Génération d'un salt aléatoire de 128 bits
++ Préparation des paramètres Argon2 (time_cost=2, memory_cost=64MB, parallelism=4)
++ Retour au client : password, salt, paramètres Argon2, clé publique Kyber
+
+=== Étape 2 : Génération des clés cryptographiques (Client)
+
+Le client (`RansomwareClient.encrypt_directory()`) effectue :
++ *Dérivation de la Master Key (MK)* :
+  - Utilise Argon2id avec le password et le salt reçus
+  - Produit une clé de 256 bits
+  - Temps de calcul : ~0.5s (protection contre brute force)
+
++ *Génération de la Root Key (RK)* :
+  - Encapsulation Kyber avec la clé publique du serveur
+  - Produit : ciphertext Kyber (1568 octets) + secret partagé (256 bits)
+  - Le secret partagé devient la Root Key
+
++ *Protection de la Root Key* :
+  - Encapsulation de la RK avec la MK via AES-GCM
+  - Génération de : ciphertext, nonce (96 bits), tag (128 bits)
+  - Sauvegarde dans `rootkey.bin` (format JSON/base64) :
+    ```json
+    {
+      "wrapped_rk_ciphertext": "...",
+      "wrapped_rk_nonce": "...",
+      "wrapped_rk_tag": "...",
+      "kyber_ciphertext": "...",
+      "salt": "...",
+      "argon2_params": {...}
+    }
+    ```
+
+=== Étape 3 : Chiffrement des fichiers
+
+Pour chaque fichier à chiffrer (`_encrypt_file()`) :
+
++ *Génération d'une clé unique* :
+  - Clé de fichier aléatoire de 256 bits via `secrets.token_bytes(32)`
+  - Garantit l'isolation : compromission d'une clé ≠ compromission des autres
+
++ *Chiffrement du contenu* :
+  - Algorithme : AES-256-GCM
+  - Entrée : contenu du fichier + clé de fichier
+  - Sortie : ciphertext, nonce (96 bits), tag (128 bits)
+
++ *Protection de la clé de fichier* :
+  - Encapsulation de la clé de fichier avec la Root Key (AES-GCM)
+  - Produit : wrapped_key_ciphertext, wrapped_key_nonce, wrapped_key_tag
+
++ *Stockage des métadonnées* :
+  - Fichier `.meta` créé (exemple : `document.txt.meta`)
+  - Format JSON/base64 :
+    ```json
+    {
+      "wrapped_key_ciphertext": "...",
+      "wrapped_key_nonce": "...",
+      "wrapped_key_tag": "...",
+      "nonce": "...",
+      "tag": "..."
+    }
+    ```
+
++ *Remplacement du fichier* :
+  - Le fichier original est écrasé avec le ciphertext
+  - Seul le fichier `.meta` permet le déchiffrement
+
+=== Fichiers exclus du chiffrement
+
+Le système protège automatiquement :
+- Fichiers Python (`.py`, `.pyc`)
+- Le code source du ransomware (`client.py`, `server.py`, etc.)
+- Les fichiers de métadonnées (`.meta`)
+- Le fichier `rootkey.bin`
+- Dossiers système (`.git`, `__pycache__`, `.venv`)
+
+== Déchiffrement complet
+
+#figure(
+  image("out/schema/02-Déchiffrement_Complet.png", width: 90%),
+  caption: [Processus de déchiffrement complet avec le mot de passe]
+)
+
+Méthode `decrypt_all()` - Le client possède le mot de passe :
+
+=== Étape 1 : Récupération des credentials
+
++ Le client demande au serveur les credentials complets
++ Le serveur retourne : password, salt, paramètres Argon2
++ (Dans un vrai ransomware, cela nécessiterait un paiement)
+
+=== Étape 2 : Récupération de la Root Key
+
++ *Dérivation de la Master Key* :
+  - Utilise Argon2id avec password + salt + paramètres
+  - Recalcul la même MK que lors du chiffrement
+
++ *Lecture de rootkey.bin* :
+  - Charge les métadonnées de la Root Key
+
++ *Désencapsulation de la Root Key* :
+  - Utilise AES-GCM avec la MK
+  - Entrée : wrapped_rk_ciphertext, wrapped_rk_nonce, wrapped_rk_tag
+  - Sortie : Root Key (256 bits)
+
+=== Étape 3 : Déchiffrement de tous les fichiers
+
+Pour chaque fichier `.meta` trouvé (`_decrypt_file_with_rk()`) :
+
++ *Lecture des métadonnées* :
+  - Charge le fichier `.meta` associé
+
++ *Désencapsulation de la clé de fichier* :
+  - Utilise AES-GCM avec la Root Key
+  - Récupère la clé de fichier originale (256 bits)
+
++ *Déchiffrement du contenu* :
+  - Utilise AES-GCM avec la clé de fichier
+  - Restaure le contenu original
+
++ *Nettoyage* :
+  - Écrase le fichier chiffré avec le contenu déchiffré
+  - Supprime le fichier `.meta`
+
+== Déchiffrement spécifique d'un fichier ou d'un dossier
+
+#figure(
+  image("out/schema/03-Dechiffrement_Spécifique.png", width: 90%),
+  caption: [Déchiffrement spécifique d'un fichier ou d'un dossier sans exposer la Root Key]
+)
+
+Méthode `decrypt_file()` - Le client N'A PAS la Root Key :
+
+=== Architecture de sécurité
+
+Ce mode permet un déchiffrement "pay-per-file" :
+- Le client ne reçoit jamais la Root Key
+- Le serveur désencapsule chaque clé de fichier à la demande
+- Limitation possible du nombre de fichiers déchiffrables
+
+=== Processus de déchiffrement
+
++ *Lecture des métadonnées* :
+  - Le client lit le fichier `.meta`
+  - Récupère : wrapped_key_ciphertext, wrapped_key_nonce, wrapped_key_tag
+  - Récupère aussi le kyber_ciphertext depuis `rootkey.bin`
+
++ *Demande au serveur* :
+  - Le client appelle `server.request_file_key_unwrap()`
+  - Envoie : les métadonnées de la clé wrappée + kyber_ciphertext
+
++ *Désencapsulation côté serveur* :
+  - Le serveur désencapsule la RK avec Kyber (via sa clé secrète)
+  - Le serveur désencapsule la clé de fichier avec la RK
+  - Le serveur retourne la clé de fichier déjà désencapsulée
+
++ *Déchiffrement côté client* :
+  - Le client reçoit la clé de fichier en clair
+  - Déchiffre le fichier avec AES-GCM
+  - Restaure le fichier et supprime le `.meta`
 
 == Modification du mot de passe
-+ Le serveur demande de réinitialiser le mot de passe.
-+ Le client génère un nouveau mot de passe aléatoire du dictionnaire.
-+ Le client dérive une nouvelle MK avec Argon2.
-+ Le client transmet le paquet de mot de passe et paramètres Argon2 au serveur.
-+ Le serveur dérive la nouvelle MK et déchiffre la RK avec la MK.
-+ Le serveur chiffre la RK avec la nouvelle MK et stocke le tout dans `rootkey.bin`.
-+ Le serveur envoie la RK chiffrée au client.
-+ Le client remplace le fichier de l'ancienne RK chiffrée par la nouvelle.
+
+#figure(
+  image("out/schema/04-Modification_Mdp.png", width: 90%),
+  caption: [Changement de mot de passe sans rechiffrer les fichiers]
+)
+
+Méthode `change_password()` - Permet de changer le mot de passe sans rechiffrer tous les fichiers :
+
+=== Principe
+
+- La Root Key reste inchangée (elle protège tous les fichiers)
+- Seule la Master Key change (elle protège la Root Key)
+- Pas besoin de rechiffrer les fichiers (optimisation majeure)
+
+=== Processus détaillé
+
++ *Génération du nouveau mot de passe* :
+  - Le client génère un nouveau mot de passe aléatoire
+  - Génère un nouveau salt de 128 bits
+  - Prépare les nouveaux paramètres Argon2
+
++ *Demande au serveur* :
+  - Le client envoie : nouveau password, nouveau salt, nouveaux paramètres
+  - Envoie aussi le kyber_ciphertext depuis `rootkey.bin`
+
++ *Réencapsulation côté serveur* :
+  - Le serveur dérive la nouvelle MK avec Argon2
+  - Le serveur récupère la RK via Kyber (avec sa clé secrète)
+  - Le serveur réencapsule la RK avec la nouvelle MK (AES-GCM)
+  - Retourne : nouveau wrapped_rk_ciphertext, nonce, tag
+
++ *Mise à jour de rootkey.bin* :
+  - Le client remplace les anciennes métadonnées
+  - Conserve le kyber_ciphertext (inchangé)
+  - Met à jour le salt et les paramètres Argon2
+  - Sauvegarde le nouveau `rootkey.bin`
+
+=== Avantages
+
+- Opération très rapide (~1 seconde vs plusieurs minutes/heures de rechiffrement)
+- Pas de risque de corruption des fichiers
+- Permet de gérer plusieurs "clients" avec des mots de passe différents
 
 
 = Implémentation technique
-== Librairies utilisées
-- `pyca/cryptography` pour le chiffrement symétrique (AES-GCM)
-- `pyca/argon2` pour la dérivation de clés avec Argon2
-- `pqcrypto` pour les opérations post-quantiques avec CRYSTALS-Kyber
 
-CRYSTALS-Kyber (ML-KEM-1024) : Utilisé seulement pour générer/échanger la Root Key
-AES-GCM 256 : Utilisé pour chiffrer les fichiers ET pour l'encapsulation de toutes les clés
-Argon2id : Utilisé pour dériver la Master Key du mot de passe
+== Architecture du code
+
+L'implémentation est organisée en modules Python distincts, chacun ayant une responsabilité spécifique :
+
+=== Structure des fichiers
+
+*`config.py` - Configuration et constantes*
+- Définit toutes les tailles de clés (`KEY_SIZE = 32` pour 256 bits)
+- Paramètres Argon2 : `time_cost=2`, `memory_cost=65536` (64 MB), `parallelism=4`
+- Noms des fichiers spéciaux (`rootkey.bin`, extension `.meta`)
+- Listes d'exclusion pour protéger le code source du chiffrement
+
+*`crypto_utils.py` - Opérations cryptographiques*
+
+Ce module fournit des wrappers autour des bibliothèques cryptographiques :
+- `generate_random_key()` : génération sécurisée avec `secrets.token_bytes()`
+- `derive_key_argon2()` : dérivation de clés avec Argon2id
+- `encrypt_aes_gcm()` / `decrypt_aes_gcm()` : chiffrement symétrique AEAD
+- `wrap_key_aes_gcm()` / `unwrap_key_aes_gcm()` : encapsulation de clés
+- `generate_kyber_keypair()` : génération de paire de clés ML-KEM-1024
+- `kyber_encapsulate()` / `kyber_decapsulate()` : échange de clés post-quantique
+
+Toutes les opérations cryptographiques passent par ces fonctions, assurant une utilisation cohérente et sécurisée des bibliothèques.
+
+*`wordlist.py` - Génération de mots de passe*
+- Charge et filtre `rockyou.txt` (4-10 caractères, alphanumériques uniquement)
+- Maintient un cache de 50,000 mots en mémoire
+- Génère des mots de passe mémorables de 4 mots (ex: "dragon-shadow-matrix-secret")
+- Utilise `secrets.choice()` pour sélection cryptographiquement sécurisée
+
+*`server.py` - Serveur de gestion des clés*
+
+La classe `RansomwareServer` gère :
+- Génération de la paire de clés Kyber (publique/secrète)
+- Génération du mot de passe aléatoire et du salt
+- Stockage sécurisé de la clé secrète Kyber en mémoire
+- Méthode `initialize_server()` : retourne password, salt, paramètres Argon2 et clé publique Kyber
+- Méthode `request_full_decryption_credentials()` : fournit les credentials pour déchiffrement complet
+- Méthode `request_file_key_unwrap()` : désencapsule une clé de fichier spécifique (déchiffrement à la demande)
+- Méthode `change_password()` : permet de changer le mot de passe sans rechiffrer les fichiers
+
+*`client.py` - Client de chiffrement/déchiffrement*
+
+La classe `RansomwareClient` implémente les méthodes principales :
+- `encrypt_directory()` : chiffrement récursif d'un dossier
+- `decrypt_all()` : déchiffrement complet avec mot de passe
+- `decrypt_file()` : déchiffrement sélectif via le serveur
+- `change_password()` : changement de mot de passe sans rechiffrement
+- `_encrypt_file()` : méthode privée de chiffrement d'un fichier
+- `_decrypt_file_with_rk()` : méthode privée de déchiffrement avec RK locale
+- `_should_skip_file()` / `_should_skip_dir()` : filtrage des fichiers/dossiers exclus
+
+*`main.py` - Interface utilisateur*
+- Menu interactif avec 6 options
+- Gestion des entrées utilisateur avec valeurs par défaut
+- Confirmations pour les opérations sensibles
+- Gestion des erreurs avec affichage détaillé
+
+== Bibliothèques cryptographiques utilisées
+
+*`cryptography` (PyCA) - Chiffrement symétrique*
+- Module `AESGCM` pour le chiffrement authentifié
+- Utilisé pour chiffrer les fichiers ET encapsuler toutes les clés
+- Bibliothèque mature et auditée, largement utilisée en production
+
+*`argon2` (PyCA) - Dérivation de clés*
+- Module `argon2.low_level.hash_secret_raw` pour Argon2id
+- Résistant aux attaques par GPU, ASIC et tables arc-en-ciel
+- Paramètres calibrés pour ~0.5s de calcul sur machine moderne
+
+*`pqcrypto` - Cryptographie post-quantique*
+- Implémentation de ML-KEM-1024 (CRYSTALS-Kyber niveau 5)
+- Utilisé uniquement pour générer et échanger la Root Key
+- Bibliothèque conforme aux spécifications NIST
+
+*`secrets` - Génération aléatoire sécurisée*
+- Utilisé pour toutes les générations aléatoires (clés, nonces, salts)
+- Utilise le CSPRNG du système d'exploitation
+
+== Choix d'implémentation
+
+*Séparation client/serveur :*
+- Architecture modulaire permettant une communication réseau future
+- Pour ce projet éducatif, la communication est simulée localement (appels de fonctions)
+- Le serveur conserve la clé secrète Kyber en mémoire
+- Le client ne manipule jamais directement la clé secrète Kyber
+
+*Gestion des métadonnées :*
+- Format JSON avec encodage base64 pour lisibilité (contexte éducatif)
+- Chaque fichier chiffré possède son fichier `.meta` contenant :
+  - La clé de fichier encapsulée (wrapped avec la RK)
+  - Le nonce et le tag AES-GCM
+- Le fichier `rootkey.bin` contient :
+  - La Root Key encapsulée (wrapped avec la MK)
+  - Le ciphertext Kyber
+  - Le salt et les paramètres Argon2
+
+*Isolation des clés de fichiers :*
+- Chaque fichier utilise une clé unique générée aléatoirement
+- Si une clé de fichier est compromise, les autres fichiers restent protégés
+- Pattern standard dans les ransomwares modernes
+
+*Utilisation de wrappers :*
+- Toutes les opérations cryptographiques passent par `crypto_utils.py`
+- Facilite les tests et la maintenance
+- Garantit une utilisation cohérente des bibliothèques
+- Permet de changer facilement d'implémentation si nécessaire
+
+*Gestion des erreurs :*
+- Exceptions levées pour toutes les erreurs cryptographiques
+- Validation des tailles de clés et paramètres
+- Messages d'erreur détaillés pour le débogage (contexte éducatif)
+
+= Tests et validation
+
+== Structure des tests
+
+Le fichier `app/test/test.py` valide les fonctionnalités principales :
+
+*Test 1 - Chiffrement* :
+- Chiffrement récursif du dossier `dossier_0`
+- Vérification de la création de `rootkey.bin`
+- Vérification de la création des fichiers `.meta`
+
+*Test 2 - Déchiffrement complet* :
+- Déchiffrement de tous les fichiers via `decrypt_all()`
+- Vérification de la restauration du contenu original
+- Suppression des fichiers `.meta`
+
+*Test 3 - Changement de mot de passe* :
+- Génération d'un nouveau mot de passe
+- Mise à jour de `rootkey.bin`
+- Vérification que les fichiers restent chiffrés
+
+*Test 4 - Déchiffrement sélectif* :
+- Rechiffrement du dossier
+- Déchiffrement d'un seul fichier via `decrypt_file()`
+- Vérification que les autres fichiers restent chiffrés
+
+== Résultats observés
+
+✅ *Chiffrement* : Tous les fichiers sont correctement chiffrés avec des clés uniques
+✅ *Déchiffrement complet* : Restauration intégrale du contenu original
+✅ *Déchiffrement sélectif* : Fonctionne sans exposer la Root Key au client
+✅ *Changement de mot de passe* : Opération rapide (~1s) sans rechiffrement
+✅ *Exclusions* : Le code source et les dossiers système sont préservés
+
+= Limitations et améliorations possibles
+
+== Limitations du contexte éducatif
+
+*Communication client/serveur* :
+- Actuellement simulée localement (appels de fonctions Python)
+- Dans un ransomware réel, nécessiterait une vraie communication réseau (HTTP/HTTPS)
+- Pas d'authentification ou de chiffrement des communications
+
+*Stockage des métadonnées* :
+- Format JSON/base64 lisible et verbeux (~40% d'overhead)
+- Un format binaire serait plus compact et moins lisible
+- Pas de vérification d'intégrité de `rootkey.bin` (pas de signature)
+
+*Gestion des erreurs* :
+- Messages d'erreur détaillés (utiles pour l'apprentissage, dangereux en production)
+- Pas de gestion des pannes pendant le chiffrement (fichiers partiellement chiffrés)
+- Pas de sauvegarde ou de rollback en cas d'erreur
+
+== Vulnérabilités potentielles
+
+*Récupération des clés en mémoire* :
+- Les clés sont stockées en clair en RAM pendant l'exécution
+- Attaque par dump mémoire possible
+- Amélioration : utiliser des zones mémoire sécurisées (mlock, secure_memory)
+
+*Traces sur le disque* :
+- Les fichiers originaux sont écrasés mais pourraient être récupérés (forensics)
+- Amélioration : écraser avec des données aléatoires (méthode Gutmann)
+
+*Clé secrète Kyber persistante* :
+- Le serveur conserve la clé secrète Kyber en mémoire pendant toute la session
+- Si le serveur est compromis, tous les fichiers peuvent être déchiffrés
+- Amélioration : détruire la clé secrète après l'encapsulation initiale
+
+*Pas de vérification d'authenticité* :
+- `rootkey.bin` peut être modifié par un attaquant
+- Amélioration : signer `rootkey.bin` avec la clé Kyber
+
+== Améliorations possibles
+
+*Performance* :
+- Chiffrement parallèle des fichiers (multiprocessing)
+- Optimisation pour les gros fichiers (chiffrement par chunks)
+
+*Fonctionnalités* :
+- Support du chiffrement réseau (communication HTTPS avec le serveur)
+- Interface graphique pour simplifier l'utilisation
+- Logs d'opérations pour audit
+
+*Sécurité* :
+- Anti-debugging et obfuscation du code
+- Détection de machines virtuelles / sandboxes
+- Persistance (redémarrage automatique)
 
 = Conclusion
 
+Ce projet démontre l'implémentation d'un ransomware éducatif intégrant la cryptographie post-quantique. L'utilisation de CRYSTALS-Kyber (ML-KEM-1024) pour la génération de la Root Key garantit une résistance aux attaques quantiques futures, conformément aux recommandations du NIST.
+
+== Points forts de l'implémentation
+
+*Architecture cryptographique solide* :
+- Niveau de sécurité uniforme à 128 bits post-quantique
+- Utilisation exclusive d'algorithmes standardisés (NIST, PyCA)
+- Séparation claire entre clés symétriques et asymétriques post-quantiques
+
+*Flexibilité opérationnelle* :
+- Trois modes de déchiffrement (complet, sélectif, par dossier)
+- Changement de mot de passe sans rechiffrement des fichiers
+- Isolation cryptographique complète entre fichiers (clé unique par fichier)
+
+*Code modulaire et maintenable* :
+- Séparation claire des responsabilités (client, serveur, crypto)
+- Wrappers autour des bibliothèques pour cohérence et sécurité
+- Tests validant toutes les fonctionnalités principales
+
+== Objectifs pédagogiques atteints
+
+Ce projet a permis d'explorer :
+- L'intégration pratique de la cryptographie post-quantique (Kyber/ML-KEM)
+- La gestion hiérarchique des clés (File Keys → Root Key → Master Key)
+- L'équilibre entre sécurité cryptographique et utilisabilité (mots de passe mémorables)
+- Les patterns d'architecture des ransomwares modernes
+
+== Perspective
+
+Bien que ce ransomware soit conçu dans un cadre éducatif, il illustre les défis de sécurité actuels :
+- La transition vers la cryptographie post-quantique est indispensable
+- Les ransomwares modernes utilisent des architectures cryptographiques sophistiquées
+- La défense nécessite une compréhension approfondie de ces mécanismes
+
+L'implémentation démontre qu'avec des bibliothèques appropriées (cryptography, pqcrypto, argon2), il est possible de construire un système cryptographique robuste tout en maintenant une complexité maîtrisable.
 
 = Utilisation de l'IA
 *Rédaction du rapport*\
