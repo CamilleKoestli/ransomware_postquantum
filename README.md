@@ -1,6 +1,6 @@
 # Ransomware Post-Quantique
 
-Projet académique pour le cours CAA 2024-2025 (Cryptographie Appliquée Avancée)
+Projet académique pour le cours CAA 2025-2026 (Cryptographie Appliquée Avancée)
 
 ## Auteur
 
@@ -13,8 +13,8 @@ Implémentation d'un système de ransomware utilisant des techniques cryptograph
 - **Chiffrement des fichiers** : AES-GCM 256 bits
 - **Encapsulation des clés** : AES-GCM 256 bits
 - **Dérivation de clés** : Argon2id
-- **Génération de clés** : CRYSTALS-Kyber (ML-KEM)
-- **Génération de mots de passe** : rockyou.txt (filtrage à la volée)
+- **Génération de clés** : CRYSTALS-Kyber-1024 (ML-KEM)
+- **Génération de mots de passe** : rockyou.txt
 
 ## Architecture
 

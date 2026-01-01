@@ -31,12 +31,11 @@ def print_menu():
 
 def get_input(prompt: str, default: str = None) -> str:
     """
-    Demande une entrée utilisateur avec valeur par défaut optionnelle
+    Demande input user
 
     Args:
         prompt: Message à afficher
-        default: Valeur par défaut si l'utilisateur appuie sur Entrée
-
+        default: Valeur par défaut
     Returns:
         Valeur saisie ou valeur par défaut
     """
@@ -62,7 +61,7 @@ def main():
     while True:
         print_menu()
 
-        choice = input("Votre choix: ").strip()
+        choice = input("Choix: ").strip()
 
         try:
             if choice == "1":
@@ -71,12 +70,7 @@ def main():
                 path = get_input("Chemin du dossier à chiffrer", ".")
 
                 if not os.path.exists(path):
-                    print(f"Erreur: Le dossier '{path}' n'existe pas")
-                    continue
-
-                confirm = input(f"ATTENTION: Tous les fichiers de '{path}' seront chiffrés. Continuer? (oui/non): ")
-                if confirm.lower() not in ['oui', 'o', 'yes', 'y']:
-                    print("Opération annulée.")
+                    print(f"Erreur : Le dossier '{path}' n'existe pas")
                     continue
 
                 client.encrypt_directory(path)
@@ -98,7 +92,7 @@ def main():
                 file_path = get_input("Chemin du fichier à déchiffrer")
 
                 if not file_path:
-                    print("Erreur: Veuillez spécifier un chemin de fichier")
+                    print("Erreur : Aucun chemin de fichier donné")
                     continue
 
                 client.decrypt_file(file_path)
@@ -109,18 +103,14 @@ def main():
                 folder_path = get_input("Chemin du dossier à déchiffrer", ".")
 
                 if not os.path.exists(folder_path):
-                    print(f"Erreur: Le dossier '{folder_path}' n'existe pas")
+                    print(f"Erreur : Le dossier '{folder_path}' n'existe pas")
                     continue
 
-                client.decrypt_folder(folder_path)
+                client.decrypt_all(folder_path)
 
             elif choice == "5":
                 # Changer mdp
                 print("\nCHANGEMENT DE MOT DE PASSE")
-                confirm = input("Voulez-vous vraiment changer le mot de passe? (oui/non): ")
-                if confirm.lower() not in ['oui', 'o', 'yes', 'y']:
-                    print("Opération annulée.")
-                    continue
 
                 client.change_password()
 
@@ -137,7 +127,7 @@ def main():
             sys.exit(0)
 
         except Exception as e:
-            print(f"\nERREUR : {e}")
+            print(f"\n[ERR] erreur : {e}")
             import traceback
             traceback.print_exc()
 
