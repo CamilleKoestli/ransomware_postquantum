@@ -92,7 +92,7 @@ Le système implémente un niveau de sécurité de 128 bits post-quantique, ce q
 
 == Choix des algorithmes
 
-*AES-256-GCM* pour le chiffrement symétrique des clés et des fichiers:
+*AES-256-GCM* pour le chiffrement symétrique des clés et des fichiers :
 - Les clés sont de 256 bits ce qui offre 128 bits de sécurité post-quantique et donc est résistant à l'algorithme de Grover
 - L'algorithme garantit la confidentialité et l'authenticité des données
 - Les nonces sont à 96 bits et les tags d'authentification à 128 bits
@@ -104,31 +104,30 @@ Le système implémente un niveau de sécurité de 128 bits post-quantique, ce q
 
 *Argon2id* pour la dérivation de clés à partir de mots de passe:
 - Paramètres : `time_cost=2`, `memory_cost=64MB`, `parallelism=4`
-- Il est résistant aux attaques par GPU, ASIC et bruteforce
+- Il est résistant aux attaques par GPU et bruteforce
 - Une dérivation de Master Key (MK) est réalisée à partir du mot de passe utilisateur
 
 == Paramètres cryptographiques
 
 === Clés symétriques (toutes à 256 bits)
 
-Uniformité garantissant 128 bits de sécurité post-quantique :
+L'uniformité garantit une sécurité 128 bits post-quantique :
 - *Clé de fichier (File Key)* : 256 bits (32 octets) - une par fichier
 - *Master Key (MK)* : 256 bits (32 octets) - dérivée du mot de passe
 - *Root Key (RK)* : 256 bits (32 octets) - secret partagé Kyber
 
 === Paramètres AES-256-GCM
 
-- *Nonce* : 96 bits (12 octets) - taille optimale pour GCM
+- *Nonce* : 96 bits (12 octets), qui est la taille optimale pour GCM
 - *Tag d'authentification* : 128 bits (16 octets)
 - *Taille de bloc* : 128 bits
-- *Mode* : AEAD (Authenticated Encryption with Associated Data)
 
 === Paramètres Argon2id
 
 - *Salt* : 128 bits (16 octets)
 - *Hash de sortie* : 256 bits (32 octets)
-- *time_cost* : 2 itérations (~0.5s de calcul)
-- *memory_cost* : 65536 KB (64 MB de RAM)
+- *time_cost* : 2 itérations
+- *memory_cost* : 65536 KB
 - *parallelism* : 4 threads
 
 === CRYSTALS-Kyber (ML-KEM-1024)
@@ -140,6 +139,60 @@ Uniformité garantissant 128 bits de sécurité post-quantique :
 - *Niveau NIST* : 5 (équivalent AES-256 post-quantique)
 
 Tous ces paramètres sont définis dans `config.py`.
+
+= Architecture générale
+
+== Séparation client/serveur
+
+#figure(
+  image("out/schema/client-serveur.png", width: 100%),
+  caption: [Architecture client-serveur du ransomware]
+)
+
+Le ransomware est composé de deux parties distinctes :
+
+*Serveur (attaquant)* :
+- Génère la paire de clés CRYSTALS-Kyber (publique/secrète)
+- Génère le mot de passe aléatoire mémorable
+- Conserve la clé secrète Kyber en mémoire sécurisée
+- Fournit les credentials pour le déchiffrement
+
+*Client (victime)* :
+- Dérive la Master Key (MK) à partir du mot de passe
+- Encapsule la Root Key (RK) via Kyber
+- Chiffre/déchiffre les fichiers
+- Stocke les métadonnées localement (`rootkey.bin`, fichiers `.meta`)
+
+La communication est actuellement simulée localement (appels de fonctions Python), mais l'architecture modulaire permet une future implémentation réseau.
+
+== Hiérarchie des clés
+
+#figure(
+  image("out/schema/clés.png", width: 70%),
+  caption: [Hiérarchie cryptographique des clés]
+)
+
+Le système utilise une architecture hiérarchique à 3 niveaux :
+
+*Niveau 1 - Master Key (MK)* :
+- Dérivée du mot de passe utilisateur avec Argon2id + salt
+- Protège la Root Key
+- Changeable sans rechiffrer les fichiers
+
+*Niveau 2 - Root Key (RK)* :
+- Générée par Kyber (secret partagé de 256 bits)
+- Encapsulée avec la MK (AES-256-GCM)
+- Protège toutes les clés de fichiers
+
+*Niveau 3 - Clés de fichiers* :
+- Une clé unique par fichier (256 bits aléatoires)
+- Encapsulées avec la RK (AES-256-GCM)
+- Isolation : compromission d'une clé ≠ compromission des autres
+
+Cette hiérarchie permet :
+- Changement de mot de passe sans rechiffrement
+- Déchiffrement sélectif (fichier par fichier via le serveur)
+- Déchiffrement complet (avec le mot de passe)
 
 = Description du ransomware
 
@@ -165,7 +218,7 @@ Le ransomware offre les fonctionnalités suivantes :
 == Initialisation et chiffrement
 
 #figure(
-  image("out/schema/01-Initialisation_Chiffrement.png", width: 90%),
+  image("out/schema/01-Initialisation_Chiffrement.png", width: 70%),
   caption: [Processus d'initialisation et de chiffrement]
 )
 
@@ -385,7 +438,9 @@ Méthode `change_password()` - Permet de changer le mot de passe sans rechiffrer
 
 == Architecture du code
 
-L'implémentation est organisée en modules Python distincts, chacun ayant une responsabilité spécifique :
+L'implémentation a été réalisée en Python, avec une séparation claire entre le client et le serveur.
+
+
 
 === Structure des fichiers
 
