@@ -54,7 +54,7 @@ def get_input(prompt: str, default: str = None) -> str:
 def main():
     print_banner()
 
-    # Initialise client dans répertoire
+    # Initialise client
     client = RansomwareClient(".")
 
     while True:
@@ -76,7 +76,7 @@ def main():
 
             elif choice == "2":
                 # Déchiffrer tout
-                print("\nDÉCHIFFREMENT COMPLET")
+                print("\nDÉCHIFFREMENT D'UN DOSSIER OU SOUS-DOSSIER")
                 path = get_input("Chemin du dossier à déchiffrer")
 
                 if not os.path.exists(path):
@@ -86,8 +86,8 @@ def main():
                 client.decrypt_all(path)
 
             elif choice == "3":
-                # Déchiffrer un fichier avec mot de passe
-                print("\nDÉCHIFFREMENT D'UN FICHIER AVEC MOT DE PASSE")
+                # Déchiffrer fichier avec mot de passe
+                print("\nDÉCHIFFREMENT D'UN FICHIER")
                 file_path = get_input("Chemin du fichier à déchiffrer")
 
                 if not file_path:

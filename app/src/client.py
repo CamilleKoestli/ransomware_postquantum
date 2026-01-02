@@ -280,7 +280,7 @@ class RansomwareClient:
         # Supprime .meta
         meta_path.unlink()
 
-    # Méthode plus utilisée car utilisation de la fonction avec mot de passe
+    # Méthode plus utilisée car utilisation de la fonction decrypt_file_with_password
     # def decrypt_file(self, file_path: str) -> None:
     #     """
     #     Déchiffre un seul fichier en demandant la clé au serveur

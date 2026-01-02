@@ -27,22 +27,13 @@ print("TEST 3: CHANGEMENT DE MOT DE PASSE")
 
 client.change_password()
 
-# print("\n" + "-" * 70)
-# print("TEST 4: DÉCHIFFREMENT D'UN FICHIER VIA SERVEUR (COMMENTÉ)")
-#
-# # Pour tester déchiffrement spécifique via serveur
-# client.encrypt_directory("dossier_0")
-#
-# # Déchiffre un seul fichier via serveur (architecture pay-per-file)
-# client.decrypt_file("dossier_0/fichier1.txt")
-
 print("\n" + "-" * 70)
-print("TEST 4: DÉCHIFFREMENT D'UN FICHIER AVEC MOT DE PASSE")
+print("TEST 4: DÉCHIFFREMENT D'UN FICHIER")
 
 # Rechiffre le dossier
 client.encrypt_directory("dossier_0")
 
-# Déchiffre un seul fichier avec mot de passe
+# Déchiffre un seul fichier
 client.decrypt_file_with_password("dossier_0/fichier2.txt")
 
 print("\n" + "-" * 70)
