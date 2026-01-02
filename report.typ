@@ -208,8 +208,9 @@ Le ransomware offre les fonctionnalités suivantes :
 
 *Déchiffrement :*
 - Déchiffrement complet avec fourniture du mot de passe (méthode `decrypt_all()`)
-- Déchiffrement sélectif fichier par fichier via le serveur (méthode `decrypt_file()`)
-- Pas besoin de la Root Key côté client pour le déchiffrement sélectif
+- Déchiffrement sélectif via le serveur sans mot de passe (méthode `decrypt_file()`)
+- Déchiffrement d'un fichier avec le mot de passe (méthode `decrypt_file_with_password()`)
+- Trois niveaux de contrôle d'accès selon le scénario d'usage
 
 *Gestion du mot de passe :*
 - Changement de mot de passe sans rechiffrer les fichiers (méthode `change_password()`)
@@ -388,6 +389,48 @@ Ce mode permet un déchiffrement "pay-per-file" :
   - Le client reçoit la clé de fichier en clair
   - Déchiffre le fichier avec AES-GCM
   - Restaure le fichier et supprime le `.meta`
+
+== Déchiffrement d'un fichier avec mot de passe
+
+Méthode `decrypt_file_with_password()` - Le client possède le mot de passe mais ne veut déchiffrer qu'un seul fichier :
+
+=== Cas d'usage
+
+Ce mode combine les avantages du déchiffrement complet et du déchiffrement sélectif :
+- Le client a le mot de passe complet (scénario "paiement effectué")
+- Mais ne souhaite déchiffrer qu'un fichier spécifique (pas tous)
+- Pas de dépendance au serveur (le client fait tout localement)
+
+Comparaison des trois modes :
+- `decrypt_all()` : Mot de passe requis → Déchiffre TOUT
+- `decrypt_file()` : Pas de mot de passe → Serveur contrôle l'accès
+- `decrypt_file_with_password()` : Mot de passe requis → Déchiffre UN fichier
+
+=== Processus détaillé
+
++ *Récupération des credentials* :
+  - Le client demande au serveur le mot de passe complet
+  - Identique au déchiffrement complet
+
++ *Dérivation de la Master Key* :
+  - Utilise Argon2id avec password + salt + paramètres
+  - Produit la MK de 256 bits
+
++ *Récupération de la Root Key* :
+  - Lit `rootkey.bin`
+  - Désencapsule la RK avec la MK (AES-GCM)
+
++ *Déchiffrement du fichier spécifique* :
+  - Réutilise la méthode privée `_decrypt_file_with_rk()`
+  - Déchiffre uniquement le fichier demandé
+  - Supprime le `.meta` correspondant
+
+=== Avantages
+
+- *Autonomie* : Pas besoin de communication avec le serveur une fois le mot de passe obtenu
+- *Flexibilité* : Permet de déchiffrer seulement les fichiers nécessaires
+- *Performance* : Évite de déchiffrer des dizaines/centaines de fichiers inutiles
+- *Sécurité* : Le client obtient temporairement la RK mais ne l'expose pas à long terme
 
 == Modification du mot de passe
 
@@ -572,9 +615,14 @@ Le fichier `app/test/test.py` valide les fonctionnalités principales :
 - Mise à jour de `rootkey.bin`
 - Vérification que les fichiers restent chiffrés
 
-*Test 4 - Déchiffrement sélectif* :
+*Test 4 - Déchiffrement sélectif via serveur* :
 - Rechiffrement du dossier
 - Déchiffrement d'un seul fichier via `decrypt_file()`
+- Vérification que les autres fichiers restent chiffrés
+
+*Test 5 - Déchiffrement d'un fichier avec mot de passe* :
+- Rechiffrement du dossier
+- Déchiffrement d'un seul fichier via `decrypt_file_with_password()`
 - Vérification que les autres fichiers restent chiffrés
 
 == Résultats observés

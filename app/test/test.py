@@ -33,8 +33,17 @@ print("TEST 4: DÉCHIFFREMENT D'UN FICHIER SPÉCIFIQUE")
 # Pour tester déchiffrement spécifique
 client.encrypt_directory("dossier_0")
 
-# Déchiffre un seul fichier spécifique
+# Déchiffre un seul fichier via serveur
 client.decrypt_file("dossier_0/fichier1.txt")
 
 print("\n" + "-" * 70)
-print("TESTS OK")
+print("TEST 5: DÉCHIFFREMENT D'UN FICHIER AVEC MOT DE PASSE")
+
+# Rechiffre le dossier
+client.encrypt_directory("dossier_0")
+
+# Déchiffre un seul fichier avec mot de passe
+client.decrypt_file_with_password("dossier_0/fichier2.txt")
+
+print("\n" + "-" * 70)
+print("TOUS LES TESTS OK")
