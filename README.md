@@ -77,12 +77,6 @@ app/
 3. Le client déchiffre la RK avec la MK
 4. Tous les fichiers sont déchiffrés avec leurs clés respectives
 
-**Déchiffrement spécifique via serveur (sans mot de passe) :**
-
-1. Le client envoie la clé encapsulée du fichier au serveur
-2. Le serveur désencapsule la clé avec la RK
-3. Le client déchiffre uniquement ce fichier
-
 **Déchiffrement d'un fichier avec mot de passe :**
 
 1. Le serveur envoie le mot de passe et les paramètres Argon2
@@ -151,12 +145,10 @@ python main.py
 Menu disponible :
 
 1. Chiffrer un dossier
-2. Déchiffrer tout (avec mot de passe)
-3. Déchiffrer un fichier via serveur (sans mot de passe)
-4. Déchiffrer un fichier avec mot de passe
-5. Déchiffrer un dossier spécifique
-6. Changer le mot de passe
-7. Quitter
+2. Déchiffrer un dossier ou sous-dossier
+3. Déchiffrer un fichier
+4. Changer le mot de passe
+5. Quitter
 
 ## Fonctionnalités
 
@@ -169,7 +161,7 @@ Chiffre récursivement tous les fichiers d'un dossier :
 - Crée un fichier `.meta` avec les métadonnées de chiffrement
 - Ignore les fichiers Python et les fichiers déjà chiffrés
 
-### 2. Déchiffrement complet (avec mot de passe)
+### 2. Déchiffrement complet ou sous-dossier
 
 Déchiffre tous les fichiers avec le mot de passe du serveur :
 
@@ -178,15 +170,7 @@ Déchiffre tous les fichiers avec le mot de passe du serveur :
 - Déchiffre la Root Key
 - Restaure tous les fichiers
 
-### 3. Déchiffrement via serveur (sans mot de passe)
-
-Déchiffre un fichier ou un dossier spécifique sans avoir le mot de passe :
-
-- Demande au serveur de désencapsuler la clé du fichier
-- Ne nécessite pas le mot de passe complet
-- Mode "pay-per-file" : le serveur contrôle quels fichiers sont déchiffrables
-
-### 4. Déchiffrement d'un fichier avec mot de passe
+### 3. Déchiffrement d'un fichier avec mot de passe
 
 Déchiffre un seul fichier spécifique en utilisant le mot de passe complet :
 
@@ -194,9 +178,9 @@ Déchiffre un seul fichier spécifique en utilisant le mot de passe complet :
 - Dérive la Master Key
 - Déchiffre la Root Key
 - Déchiffre uniquement le fichier spécifié
-- Plus flexible que le déchiffrement via serveur (pas besoin de permission serveur)
+- Permet de déchiffrer seulement les fichiers nécessaires sans déchiffrer tout
 
-### 5. Changement de mot de passe
+### 4. Changement de mot de passe
 
 Permet de changer le mot de passe sans re-chiffrer tous les fichiers :
 
@@ -312,7 +296,8 @@ Le script de test exécute automatiquement :
 - Re-encapsule la Root Key
 - Vérifie que la nouvelle clé fonctionne
 
-**Test 4 : Déchiffrement spécifique**
+**Test 4 : Déchiffrement d'un fichier avec mot de passe**
 
-- Déchiffre un seul fichier spécifique
-- Utilise la désencapsulation côté serveur
+- Rechiffrement du dossier
+- Déchiffrement d'un seul fichier via `decrypt_file_with_password()`
+- Vérification que les autres fichiers restent chiffrés

