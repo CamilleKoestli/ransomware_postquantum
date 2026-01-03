@@ -57,7 +57,7 @@ app/
 
 ### Flux de chiffrement
 
-1. Le serveur génère un mot de passe aléatoire depuis rockyou.txt (ex: "dragon-shadow-matrix-secret")
+1. Le serveur génère un mot de passe aléatoire de 8-15 caractères depuis rockyou.txt (ex: "password123")
 2. Le client dérive une Master Key (MK) à partir du mot de passe avec Argon2
 3. Le serveur génère une paire de clés Kyber (publique/secrète)
 4. Le client génère la Root Key (RK) via encapsulation Kyber avec la clé publique
@@ -185,7 +185,7 @@ Déchiffre un seul fichier spécifique en utilisant le mot de passe complet :
 Permet de changer le mot de passe sans re-chiffrer tous les fichiers :
 
 - Génère un nouveau mot de passe aléatoire
-- Re-encapsule la Root Key avec la nouvelle Master Key
+- Réencapsule la Root Key avec la nouvelle Master Key
 - Met à jour `rootkey.bin`
 
 ## Fichiers générés
@@ -293,11 +293,11 @@ Le script de test exécute automatiquement :
 **Test 3 : Changement de mot de passe**
 
 - Génère un nouveau mot de passe
-- Re-encapsule la Root Key
+- Réencapsule la Root Key
 - Vérifie que la nouvelle clé fonctionne
 
-**Test 4 : Déchiffrement d'un fichier avec mot de passe**
+**Test 4 : Déchiffrement d'un fichier**
 
 - Rechiffrement du dossier
-- Déchiffrement d'un seul fichier via `decrypt_file_with_password()`
+- Déchiffrement d'un seul fichier via `decrypt_file()`
 - Vérification que les autres fichiers restent chiffrés

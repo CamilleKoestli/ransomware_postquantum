@@ -34,7 +34,7 @@ print("TEST 4: DÉCHIFFREMENT D'UN FICHIER")
 client.encrypt_directory("dossier_0")
 
 # Déchiffre un seul fichier
-client.decrypt_file_with_password("dossier_0/fichier2.txt")
+client.decrypt_file("dossier_0/fichier2.txt")
 
 print("\n" + "-" * 70)
 print("TOUS LES TESTS OK")
