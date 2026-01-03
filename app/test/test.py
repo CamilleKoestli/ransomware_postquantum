@@ -28,13 +28,13 @@ print("TEST 3: CHANGEMENT DE MOT DE PASSE")
 client.change_password()
 
 print("\n" + "-" * 70)
-print("TEST 4: DÉCHIFFREMENT D'UN FICHIER SPÉCIFIQUE")
+print("TEST 4: DÉCHIFFREMENT D'UN FICHIER")
 
-# Pour tester déchiffrement spécifique
+# Rechiffre le dossier
 client.encrypt_directory("dossier_0")
 
-# Déchiffre un seul fichier spécifique
-client.decrypt_file("dossier_0/fichier1.txt")
+# Déchiffre un seul fichier
+client.decrypt_file("dossier_0/fichier2.txt")
 
 print("\n" + "-" * 70)
-print("TESTS OK")
+print("TOUS LES TESTS OK")

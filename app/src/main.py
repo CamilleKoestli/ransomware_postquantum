@@ -21,11 +21,10 @@ def print_menu():
     print("\nMENU PRINCIPAL")
     print("-" * 70)
     print("1. Chiffrer un dossier")
-    print("2. Déchiffrer tout")
-    print("3. Déchiffrer un fichier spécifique")
-    print("4. Déchiffrer un dossier spécifique")
-    print("5. Changer le mot de passe")
-    print("6. Quitter")
+    print("2. Déchiffrer un dossier ou sous-dossier")
+    print("3. Déchiffrer un fichier")
+    print("4. Changer le mot de passe")
+    print("5. Quitter")
     print("-" * 70)
 
 
@@ -55,7 +54,7 @@ def get_input(prompt: str, default: str = None) -> str:
 def main():
     print_banner()
 
-    # Initialise client dans répertoire
+    # Initialise client
     client = RansomwareClient(".")
 
     while True:
@@ -77,17 +76,17 @@ def main():
 
             elif choice == "2":
                 # Déchiffrer tout
-                print("\nDÉCHIFFREMENT COMPLET")
+                print("\nDÉCHIFFREMENT D'UN DOSSIER OU SOUS-DOSSIER")
                 path = get_input("Chemin du dossier à déchiffrer")
 
                 if not os.path.exists(path):
-                    print(f"Erreur: Le dossier '{path}' n'existe pas")
+                    print(f"Erreur : Le dossier '{path}' n'existe pas")
                     continue
 
                 client.decrypt_all(path)
 
             elif choice == "3":
-                # Déchiffrer un fichier
+                # Déchiffrer fichier avec mot de passe
                 print("\nDÉCHIFFREMENT D'UN FICHIER")
                 file_path = get_input("Chemin du fichier à déchiffrer")
 
@@ -98,23 +97,12 @@ def main():
                 client.decrypt_file(file_path)
 
             elif choice == "4":
-                # Déchiffrer un dossier
-                print("\nDÉCHIFFREMENT D'UN DOSSIER")
-                folder_path = get_input("Chemin du dossier à déchiffrer")
-
-                if not os.path.exists(folder_path):
-                    print(f"Erreur : Le dossier '{folder_path}' n'existe pas")
-                    continue
-
-                client.decrypt_all(folder_path)
-
-            elif choice == "5":
                 # Changer mdp
                 print("\nCHANGEMENT DE MOT DE PASSE")
 
                 client.change_password()
 
-            elif choice == "6":
+            elif choice == "5":
                 # Quitter
                 print("\nQuitter")
                 sys.exit(0)

@@ -20,6 +20,8 @@ def _load_rockyou_words():
     """
     Charge mots depuis rockyou.txt
 
+    Filtre uniquement les mots de 8-15 caractères
+
     Returns:
         Liste de mots ok
     """
@@ -38,8 +40,8 @@ def _load_rockyou_words():
     with open(ROCKYOU_PATH, 'r', encoding='utf-8', errors='ignore') as f:
         for line in f:
             word = line.strip()
-            # 4-10 caractères, alphanumériques seulement
-            if 4 <= len(word) <= 10 and word.isalnum():
+            # 8-15 caractères
+            if 8 <= len(word) <= 15 and word.isprintable() and len(word) > 0:
                 valid_words.append(word)
 
             # Stop si on a assez de mots
@@ -58,18 +60,15 @@ def _load_rockyou_words():
     return words
 
 
-def generate_random_password(num_words: int = 4, separator: str = "-") -> str:
+def generate_random_password() -> str:
     """
     Génère mdp aléatoire avec mots de rockyou.txt
 
-    Args:
-        num_words: Nombre mots (défaut: 4)
-        separator: Séparateur (défaut: "-")
+    Sélectionne un seul mot
 
     Returns:
         Mdp généré
     """
     word_list = _load_rockyou_words()
-    words = [secrets.choice(word_list) for _ in range(num_words)]
-    password = separator.join(words)
+    password = secrets.choice(word_list)
     return password

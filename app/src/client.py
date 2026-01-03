@@ -282,10 +282,10 @@ class RansomwareClient:
 
     def decrypt_file(self, file_path: str) -> None:
         """
-        Déchiffre un seul fichier en demandant la clé au serveur
+        Déchiffre un seul fichier en utilisant mdp
 
         Args:
-            file_path: Chemin du fichier à déchiffrer (ou son .meta)
+            file_path: Chemin du fichier à déchiffrer ou .meta
         """
         # Vérifie si c'est .meta ou fichier chiffré
         file_path_obj = Path(file_path).resolve()
@@ -303,45 +303,41 @@ class RansomwareClient:
         if not encrypted_path.exists():
             raise FileNotFoundError(f"Fichier chiffré {encrypted_path} pas trouvé")
 
-        print(f"\n[CLT] Déchiffrement fichier {encrypted_path.name}")
+        print(f"\n[CLT] Déchiffrement fichier avec mot de passe {encrypted_path.name}")
 
-        # Lit métadonnées
-        with open(meta_path, 'r') as f:
-            metadata = json.load(f)
+        # Credentials au serveur
+        credentials = server.request_full_decryption_credentials()
 
-        wrapped_key_ciphertext = base64.b64decode(metadata["wrapped_key_ciphertext"])
-        wrapped_key_nonce = base64.b64decode(metadata["wrapped_key_nonce"])
-        wrapped_key_tag = base64.b64decode(metadata["wrapped_key_tag"])
+        password = credentials["password"]
+        salt = credentials["salt"]
+        argon2_params = credentials["argon2_params"]
 
-        # kyber_ciphertext depuis rootkey.bin
+        # Dérive MK
+        print("[CLT] Dérive MK")
+        master_key = crypto_utils.derive_key_argon2(
+            password=password,
+            salt=salt,
+            **argon2_params
+        )
+
+        # Lit rootkey.bin et désencapsule RK
+        print("[CLT] Lecture de rootkey.bin")
         if not self.rootkey_path.exists():
-            raise FileNotFoundError(f"Le fichier {config.ROOTKEY_FILENAME} n'existe pas")
+            raise FileNotFoundError(f"Fichier {config.ROOTKEY_FILENAME} pas trouvé")
 
         with open(self.rootkey_path, 'r') as f:
             rootkey_data = json.load(f)
 
-        kyber_ciphertext = base64.b64decode(rootkey_data["kyber_ciphertext"])
+        wrapped_rk_ciphertext = base64.b64decode(rootkey_data["wrapped_rk_ciphertext"])
+        wrapped_rk_nonce = base64.b64decode(rootkey_data["wrapped_rk_nonce"])
+        wrapped_rk_tag = base64.b64decode(rootkey_data["wrapped_rk_tag"])
 
-        # Serveur désencapsule la clé
-        print("[CLT] Désencapsule clé fichier")
-        file_key = server.request_file_key_unwrap(wrapped_key_ciphertext, wrapped_key_nonce, wrapped_key_tag, kyber_ciphertext)
-
-        # Lit fichier chiffré
-        with open(encrypted_path, 'rb') as f:
-            ciphertext = f.read()
+        print("[CLT] Désencapsule RK")
+        root_key = crypto_utils.unwrap_key_aes_gcm(wrapped_rk_ciphertext, master_key, wrapped_rk_nonce, wrapped_rk_tag)
 
         # Déchiffre fichier
-        nonce = base64.b64decode(metadata["nonce"])
-        tag = base64.b64decode(metadata["tag"])
-
-        plaintext = crypto_utils.decrypt_aes_gcm(ciphertext, file_key, nonce, tag)
-
-        # Écrase fichier avec contenu normal
-        with open(encrypted_path, 'wb') as f:
-            f.write(plaintext)
-
-        # Supprime .meta
-        meta_path.unlink()
+        print("[CLT] Déchiffre le fichier")
+        self._decrypt_file_with_rk(encrypted_path, meta_path, root_key)
 
         print(f"[CLT] Fichier déchiffré {encrypted_path}")
 
