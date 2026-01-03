@@ -81,36 +81,9 @@ class RansomwareServer:
             "argon2_params": self.argon2_params,
         }
 
-    # Méthode plus utilisée car seul utilisation était pour decrypt_file
-    # def request_file_key_unwrap(self, wrapped_key_ciphertext: bytes, wrapped_key_nonce: bytes, wrapped_key_tag: bytes, kyber_ciphertext: bytes) -> bytes:
-    #     """
-    #     Désencapsule clé de fichier avec RK
-
-    #     Args:
-    #         wrapped_key_ciphertext: Ciphertext clé de fichier encapsulée
-    #         wrapped_key_nonce: Nonce utilisé pour l'encapsulation
-    #         wrapped_key_tag: Tag
-    #         kyber_ciphertext: Ciphertext Kyber pour récupérer RK
-
-    #     Returns:
-    #         Clé de fichier désencapsulée
-    #     """
-    #     if not self.initialized:
-    #         raise RuntimeError("[ERR] Le serveur n'est pas initialisé")
-
-    #     if self.kyber_secret_key is None:
-    #         raise RuntimeError("[ERR] La clé secrète Kyber n'est pas dispo")
-
-    #     root_key = crypto_utils.kyber_decapsulate(self.kyber_secret_key, kyber_ciphertext)
-
-    #     print("[SVR] Désencapsule clé de fichier")
-    #     file_key = crypto_utils.unwrap_key_aes_gcm(wrapped_key_ciphertext, root_key, wrapped_key_nonce, wrapped_key_tag)
-
-    #     return file_key
-
     def change_password(self, new_password: str, new_salt: bytes, new_argon2_params: Dict, kyber_ciphertext: bytes) -> Dict:
         """
-        Change mdp et re-encapsule RK
+        Change mdp et réencapsule RK
 
         Args:
             new_password: New mdp
@@ -140,8 +113,8 @@ class RansomwareServer:
             **new_argon2_params
         )
 
-        # Re-encapsule RK avec new MK
-        print("[SVR] Re-encapsule RK")
+        # Réencapsule RK avec new MK
+        print("[SVR] Réencapsule RK")
         wrapped_rk_ciphertext, wrapped_rk_nonce, wrapped_rk_tag = crypto_utils.wrap_key_aes_gcm(root_key, new_master_key)
 
         # Màj état serveur

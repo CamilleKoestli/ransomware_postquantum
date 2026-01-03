@@ -94,7 +94,7 @@ def main():
                     print("Erreur : Aucun chemin de fichier donné")
                     continue
 
-                client.decrypt_file_with_password(file_path)
+                client.decrypt_file(file_path)
 
             elif choice == "4":
                 # Changer mdp
