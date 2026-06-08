@@ -160,7 +160,7 @@ Le ransomware est composé de deux parties distinctes :
 *Client (victime)* :
 - Dérive la Master Key (MK) à partir du mot de passe
 - Encapsule la Root Key (RK) via Kyber
-- Chiffre/déchiffre les fichiers de manière hiérarchique et récursive
+- Chiffre/déchiffre les fichiers
 - Stocke les métadonnées localement (`rootkey.bin`, fichiers `.key`, `.root_key`, `.enc`)
 
 La communication entre le client et le serveur est réalisée localement grâce à des appels de fonctions. Pour un ransomware réel, cette communication serait effectuée grâce à un canal réseau sécurisé (ex: HTTPS).
@@ -172,7 +172,7 @@ La communication entre le client et le serveur est réalisée localement grâce 
   caption: [Hiérarchie cryptographique des clés]
 )
 
-Le système utilise une architecture hiérarchique à 4 niveaux :
+Le système utilise une architecture à 4 niveaux :
 
 *Master Key (MK)* : Elle est dérivée du mot de passe utilisateur avec Argon2id + sel. Elle permet de protéger la Root Key et peut être changée sans rechiffrer les fichiers.
 
@@ -193,7 +193,7 @@ Cette hiérarchie permet :
 
 Le ransomware possède les fonctionnalités suivantes :
 
-*Chiffrement des fichiers* : Le système permet le chiffrement récursif et hiérarchique d'un dossier complet. Un mot de passe de 8 à 15 caractères est généré automatiquement depuis la wordlist `rockyou.txt`. Chaque fichier est chiffré avec une `file_key` unique de 256 bits, stocké sous forme de `fichier.enc`. Chaque dossier dispose d'une `folder_key` propre. Les clés sont chaînées hiérarchiquement : la clé d'un item est chiffrée avec la clé de son parent (`.key`). Pour les items hors du niveau racine, une copie supplémentaire de la clé est chiffrée avec la Root Key et stockée en `.root_key`, permettant le déchiffrement individuel.
+*Chiffrement des fichiers* : Le système permet le chiffrement récursif d'un dossier complet. Un mot de passe de 8 à 15 caractères est généré automatiquement depuis la wordlist `rockyou.txt`. Chaque fichier est chiffré avec une `file_key` unique de 256 bits, stocké sous forme de `fichier.enc`. Chaque dossier dispose d'une `folder_key` propre. Les clés sont chaînées hiérarchiquement : la clé d'un item est chiffrée avec la clé de son parent (`.key`). Pour les items hors du niveau racine, une copie supplémentaire de la clé est chiffrée avec la Root Key et stockée en `.root_key`, permettant le déchiffrement individuel.
 
 *Déchiffrement des fichiers* : Deux méthodes de déchiffrement sont disponibles dans le menu principal. La première méthode, `decrypt_all()`, effectue un déchiffrement récursif complet en utilisant la hiérarchie des clés (RK → folder_key → file_key). La seconde méthode, `decrypt_file()`, permet le déchiffrement individuel d'un seul fichier : le client envoie le fichier `.root_key` au serveur, qui le déchiffre avec la Root Key (via Kyber) et retourne la `file_key` en clair.
 
@@ -240,7 +240,7 @@ Le client (`RansomwareClient.encrypt_directory()`) va :
     }
     ```
 
-=== Étape 3 : Chiffrement récursif hiérarchique
+=== Étape 3 : Chiffrement récursif
 
 Le chiffrement est réalisé par `_encrypt_dir_recursive()` qui traite chaque entrée du dossier courant avec la `parent_key` du niveau courant (RK pour la racine, `folder_key` sinon).
 
@@ -319,7 +319,7 @@ Pour récupérer la Root Key, le client va :
 + *Désencapsuler la Root Key* :
   - Utilise AES-GCM avec la MK. La sortie est la Root Key.
 
-=== Étape 3 : Déchiffrement récursif hiérarchique
+=== Étape 3 : Déchiffrement récursif
 
 Le déchiffrement est réalisé par `_decrypt_dir_recursive()` en partant de la racine avec RK comme `parent_key`.
 
@@ -452,8 +452,8 @@ La classe `RansomwareServer` gère :
 
 *`client.py` : Client de chiffrement/déchiffrement*\
 La classe `RansomwareClient` implémente les méthodes principales :
-- `encrypt_directory()` : lance le chiffrement hiérarchique récursif via `_encrypt_dir_recursive()`
-- `decrypt_all()` : déchiffrement hiérarchique récursif via `_decrypt_dir_recursive()`
+- `encrypt_directory()` : lance le chiffrement récursif via `_encrypt_dir_recursive()`
+- `decrypt_all()` : déchiffrement récursif via `_decrypt_dir_recursive()`
 - `decrypt_file()` : déchiffrement individuel d'un fichier via le serveur (envoie le `.root_key`)
 - `change_password()` : changement de mot de passe sans rechiffrement
 - `_encrypt_dir_recursive()` : gère la hiérarchie des clés (folder\_key / file\_key / parent\_key)
@@ -503,7 +503,7 @@ Enfin cette architecture est résistante aux attaques quantiques grâce à l'uti
 
 Le fichier `app/test/test.py` valide les fonctionnalités principales :
 
-*Test 1 - Chiffrement hiérarchique* :
+*Test 1 - Chiffrement* :
 - Chiffrement récursif du dossier `dossier_0`
 - Vérification de la création de `rootkey.bin`
 - Vérification de la création des fichiers `.enc`, `.key` pour les items racine
@@ -528,7 +528,7 @@ Le fichier `app/test/test.py` valide les fonctionnalités principales :
 
 Ce projet implémente toutes les fonctionnalités de base demandées dans la consigne. Une fonctionnalité supplémentaire a été ajoutée :
 
-== Chiffrement récursif hiérarchique de dossiers
+== Chiffrement récursif de dossiers
 
 Le chiffrement récursif (`encrypt_directory()`) et le déchiffrement récursif (`decrypt_all()`) permettent de traiter une arborescence complète de fichiers tout en maintenant une hiérarchie de clés cryptographiques.
 
