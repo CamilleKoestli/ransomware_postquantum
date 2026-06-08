@@ -1,6 +1,6 @@
 # Ransomware Post-Quantique
 
-Projet académique pour le cours ICR 2026-2027 (Industrial Cryptography)
+Projet académique pour le cours ICR 2026 (Industrial Cryptography)
 
 ## Auteur
 
@@ -8,13 +8,13 @@ Camille Koestli - HES-SO
 
 ## Description
 
-Implémentation d'un ransomware qui utilise des techniques cryptographiques modernes et post-quantiques :
+Implémentation d'un ransomware résistant aux ordinateurs quantiques :
 
 - **Chiffrement des fichiers** : AES-GCM 256 bits
 - **Encapsulation des clés** : AES-GCM 256 bits
 - **Dérivation de clés** : Argon2id
-- **Génération de clés** : CRYSTALS-Kyber-1024 (ML-KEM)
-- **Génération de mots de passe** : rockyou.txt
+- **Génération de la Root Key** : CRYSTALS-Kyber-1024 (ML-KEM, niveau 5 NIST)
+- **Génération de mots de passe** : wordlist `rockyou.txt` (8-15 caractères)
 
 ## Architecture
 
@@ -32,173 +32,75 @@ app/
 │   ├── main.py                 # Interface utilisateur interactive
 │   └── requirements.txt        # Dépendances Python
 └── test/
-    └── test.py                 # Tests automatisés
+    ├── test.py                 # Tests automatisés
+    └── dossier_0/              # Dossier de test (recréé automatiquement)
+        ├── fichier0_1.txt
+        ├── fichier0_2.txt
+        └── sous_dossier/
+            ├── fichier1_1.txt
+            └── fichier1_2.txt
 ```
 
-### Architecture cryptographique
+### Hiérarchie des clés
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         SERVEUR                             │
-│  - Génère le mot de passe aléatoire                         │
-│  - Génère la paire de clés Kyber                            │
-│  - Gère les demandes de déchiffrement                       │
-└─────────────────────────────────────────────────────────────┘
-                            ▲  ▼
-┌─────────────────────────────────────────────────────────────┐
-│                         CLIENT                              │
-│  - Dérive la Master Key (MK) avec Argon2                    │
-│  - Génère la Root Key (RK) avec Kyber                       │
-│  - Chiffre/déchiffre les fichiers avec AES-GCM              │
-│  - Encapsule les clés avec AES-GCM                          │
-│  - Stocke les métadonnées dans des fichiers .meta           │
-└─────────────────────────────────────────────────────────────┘
+Mot de passe (8-15 chars)
+       │
+    Argon2id
+       │
+    Master Key (MK, 256 bits)
+       │
+       ├── encapsule ──► Root Key (RK, 256 bits)  ◄── Kyber-1024
+       │                        │
+       │          ┌─────────────┼─────────────┐
+       │          │             │             │
+       │     folder_key    file_key_A    file_key_B
+       │     (256 bits)    (256 bits)    (256 bits)
+       │          │
+       │     fichier.key  (chiffré avec parent_key)
+       │     fichier.root_key  (chiffré avec RK, pour déchiffrement individuel)
+       │
+    rootkey.bin  (wrapped_rk + kyber_ciphertext + sel + params Argon2)
 ```
 
 ### Flux de chiffrement
 
-1. Le serveur génère un mot de passe aléatoire de 8-15 caractères depuis rockyou.txt (ex: "password123")
-2. Le client dérive une Master Key (MK) à partir du mot de passe avec Argon2
-3. Le serveur génère une paire de clés Kyber (publique/secrète)
-4. Le client génère la Root Key (RK) via encapsulation Kyber avec la clé publique
-5. La RK est encapsulée avec la MK (AES-GCM) et stockée dans `rootkey.bin`
-6. Pour chaque fichier :
-   - Une clé de fichier aléatoire est générée
-   - Le fichier est chiffré avec AES-GCM
-   - La clé de fichier est encapsulée avec la RK (AES-GCM)
-   - Les métadonnées (ciphertext, nonce, tag) sont stockées dans un fichier `.meta`
+1. Le serveur génère un mot de passe aléatoire (8-15 chars, depuis `rockyou.txt`) et une paire de clés Kyber
+2. Le client dérive la **Master Key (MK)** avec Argon2id (mot de passe + sel)
+3. Le client génère la **Root Key (RK)** via encapsulation Kyber avec la clé publique du serveur
+4. La RK est encapsulée avec la MK (AES-GCM) et stockée dans `rootkey.bin`
+5. Pour chaque item du dossier (récursif) :
+   - **Sous-dossier** : génère une `folder_key`, sauvegarde `dossier.key` (chiffré avec `parent_key`) et `dossier.root_key` (chiffré avec RK, si hors niveau racine)
+   - **Fichier** : génère une `file_key`, sauvegarde `fichier.enc` (`nonce || ciphertext`), `fichier.key` (chiffré avec `parent_key`) et `fichier.root_key` (chiffré avec RK, si hors niveau racine)
 
 ### Flux de déchiffrement
 
-**Déchiffrement complet (avec mot de passe) :**
+**Déchiffrement complet ou d'un sous-dossier (`decrypt_all`) :**
 
-1. Le serveur envoie le mot de passe et les paramètres Argon2
-2. Le client dérive la MK avec Argon2
-3. Le client déchiffre la RK avec la MK
-4. Tous les fichiers sont déchiffrés avec leurs clés respectives
+1. Le serveur renvoie le mot de passe et les paramètres Argon2
+2. Le client dérive la MK, puis désencapsule la RK depuis `rootkey.bin`
+3. Déchiffrement récursif : pour chaque item, préfère `.root_key` + RK si disponible, sinon `.key` + `parent_key`. Ce mécanisme permet de déchiffrer un sous-dossier directement sans remonter toute la hiérarchie.
 
-**Déchiffrement d'un fichier avec mot de passe :**
+**Déchiffrement d'un fichier individuel (`decrypt_file`) :**
 
-1. Le serveur envoie le mot de passe et les paramètres Argon2
-2. Le client dérive la MK avec Argon2
-3. Le client déchiffre la RK avec la MK
-4. Un seul fichier spécifique est déchiffré
+1. Le client envoie le fichier `.root_key` (ou `.key` si niveau racine) et le `kyber_ciphertext` au serveur
+2. Le serveur reconstruit la RK via désencapsulation Kyber et retourne la `file_key` en clair
+3. Le client déchiffre le fichier `.enc` avec la `file_key`
 
-## Installation
+**Changement de mot de passe (`change_password`) :**
 
-### Avec environnement virtuel
+1. Le client génère un nouveau mot de passe et sel
+2. Le serveur désencapsule la RK via Kyber, la réencapsule avec la nouvelle MK
+3. `rootkey.bin` est mis à jour — les fichiers `.enc` ne sont pas rechiffrés
 
-```bash
-# Créer l'environnement virtuel
-python3 -m venv venv
+## Fichiers générés lors du chiffrement
 
-# Activer l'environnement virtuel
-# Sur Linux/Mac:
-source venv/bin/activate
-# Sur Windows:
-# venv\Scripts\activate
-
-# Installer les dépendances
-pip install --upgrade pip
-pip install -r app/src/requirements.txt
-
-# Pour désactiver l'environnement virtuel quand vous avez terminé:
-deactivate
-```
-
-## Utilisation
-
-**Important:** N'oubliez pas d'activer l'environnement virtuel avant d'exécuter les scripts :
-
-```bash
-source venv/bin/activate  # Linux/Mac
-# ou venv\Scripts\activate sur Windows
-```
-
-### Installation globale
-
-```bash
-# Installer les dépendances directement sur le système
-pip install -r app/src/requirements.txt
-```
-
-### Télécharger la wordlist rockyou.txt
-
-Le projet utilise la wordlist rockyou.txt pour générer des mots de passe. Téléchargez-la et placez-la dans `app/src/` :
-
-```bash
-# Télécharger rockyou.txt
-cd app/src
-wget https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt
-
-# Ou avec curl
-curl -L -o rockyou.txt https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt
-```
-
-### Interface interactive
-
-```bash
-cd app/src
-python main.py
-```
-
-Menu disponible :
-
-1. Chiffrer un dossier
-2. Déchiffrer un dossier ou sous-dossier
-3. Déchiffrer un fichier
-4. Changer le mot de passe
-5. Quitter
-
-## Fonctionnalités
-
-### 1. Chiffrement de dossiers
-
-Chiffre récursivement tous les fichiers d'un dossier :
-
-- Génère une clé unique par fichier
-- Écrase le fichier original avec le contenu chiffré (garde le même nom)
-- Crée un fichier `.meta` avec les métadonnées de chiffrement
-- Ignore les fichiers Python et les fichiers déjà chiffrés
-
-### 2. Déchiffrement complet ou sous-dossier
-
-Déchiffre tous les fichiers avec le mot de passe du serveur :
-
-- Récupère le mot de passe et les paramètres Argon2
-- Dérive la Master Key
-- Déchiffre la Root Key
-- Restaure tous les fichiers
-
-### 3. Déchiffrement d'un fichier avec mot de passe
-
-Déchiffre un seul fichier spécifique en utilisant le mot de passe complet :
-
-- Récupère le mot de passe et les paramètres Argon2
-- Dérive la Master Key
-- Déchiffre la Root Key
-- Déchiffre uniquement le fichier spécifié
-- Permet de déchiffrer seulement les fichiers nécessaires sans déchiffrer tout
-
-### 4. Changement de mot de passe
-
-Permet de changer le mot de passe sans re-chiffrer tous les fichiers :
-
-- Génère un nouveau mot de passe aléatoire
-- Réencapsule la Root Key avec la nouvelle Master Key
-- Met à jour `rootkey.bin`
-
-## Fichiers générés
-
-### rootkey.bin
-
-Contient la Root Key encapsulée et les paramètres Argon2 :
+### `rootkey.bin`
 
 ```json
 {
   "wrapped_rk_ciphertext": "base64...",
   "wrapped_rk_nonce": "base64...",
-  "wrapped_rk_tag": "base64...",
   "kyber_ciphertext": "base64...",
   "salt": "base64...",
   "argon2_params": {
@@ -210,94 +112,90 @@ Contient la Root Key encapsulée et les paramètres Argon2 :
 }
 ```
 
-### fichier.meta
+### `fichier.enc`
 
-Contient les métadonnées de chiffrement pour chaque fichier :
+Fichier binaire : `nonce (12 octets) || ciphertext_with_tag`
+
+### `fichier.key` / `dossier.key`
 
 ```json
 {
-  "wrapped_key_ciphertext": "base64...",
-  "wrapped_key_nonce": "base64...",
-  "wrapped_key_tag": "base64...",
-  "nonce": "base64...",
-  "tag": "base64..."
+  "ciphertext": "base64...",
+  "nonce": "base64..."
 }
+```
+
+Clé du fichier/dossier chiffrée avec la clé parente (`parent_key`).
+
+### `fichier.root_key` / `dossier.root_key`
+
+Même format que `.key`, mais la clé est chiffrée avec la Root Key. Créé uniquement pour les items hors du niveau racine du dossier chiffré. Permet le déchiffrement individuel via le serveur.
+
+## Installation
+
+```bash
+# Créer et activer l'environnement virtuel
+python3 -m venv venv
+source venv/bin/activate        # Linux/Mac
+# venv\Scripts\activate         # Windows
+
+# Installer les dépendances
+pip install --upgrade pip
+pip install -r app/src/requirements.txt
+```
+
+### Télécharger la wordlist `rockyou.txt`
+
+```bash
+cd app/src
+wget https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt
+```
+
+## Utilisation
+
+```bash
+source venv/bin/activate
+cd app/src
+python main.py
+```
+
+Menu disponible :
+
+```
+1. Chiffrer un dossier
+2. Déchiffrer un dossier ou sous-dossier
+3. Déchiffrer un fichier
+4. Changer le mot de passe
+5. Quitter
 ```
 
 ## Paramètres cryptographiques
 
-### Tailles de clés
-
-- Clé de fichier : 256 bits (32 octets)
-- Master Key (MK) : 256 bits (32 octets)
-- Root Key (RK) : 256 bits (32 octets)
-
-### Paramètres Argon2
-
-```python
-time_cost = 2          # Itérations
-memory_cost = 65536    # 64 MB
-parallelism = 4        # Threads
-hash_len = 32          # 256 bits
-```
-
-### AES-GCM
-
-- Taille de clé : 256 bits
-- Nonce : 96 bits (12 octets)
-- Tag : 128 bits (16 octets)
-
-## Sécurité
-
-### Points forts
-
-- Utilisation d'algorithmes standards et éprouvés (AES-GCM, Argon2, Kyber)
-- Clés de 256 bits partout (niveau de sécurité : 128 bits post-quantique)
-- Argon2id pour la dérivation de clés (résistant au GPU/ASIC)
-- CRYSTALS-Kyber pour la génération de la Root Key (post-quantique)
-- AES-GCM pour le chiffrement et l'encapsulation (AEAD)
-- Génération de clés avec `secrets` (CSPRNG)
-- Clé unique par fichier (isolation)
-
-### Limitations
-
-- Communication client-serveur simulée localement (pas de réseau)
-- Pas de vérification d'intégrité de `rootkey.bin`
-- Métadonnées stockées en JSON/base64 (format lisible, augmente la taille des données)
+| Paramètre | Valeur |
+|-----------|--------|
+| Taille des clés (MK, RK, file_key, folder_key) | 256 bits |
+| Nonce AES-GCM | 96 bits (12 octets) |
+| Tag AES-GCM | 128 bits (16 octets) |
+| Salt Argon2id | 128 bits (16 octets) |
+| Argon2id time_cost | 2 |
+| Argon2id memory_cost | 65536 KB (64 MB) |
+| Argon2id parallelism | 4 |
+| Kyber | ML-KEM-1024 (niveau 5 NIST) |
+| Niveau de sécurité post-quantique | 128 bits |
 
 ## Tests
 
-Pour lancer tous les tests :
+Le script de test se remet automatiquement dans un état propre avant chaque exécution (supprime les artefacts de chiffrement et recrée les fichiers plaintext).
 
 ```bash
-# Activer le venv
-$ source venv/bin/activate
-$ cd app/test
-$ python test.py
+# Depuis la racine du projet
+source venv/bin/activate
+python app/test/test.py
 ```
 
-Le script de test exécute automatiquement :
-
-**Test 1 : Chiffrement de dossier**
-
-- Chiffre tous les fichiers de `dossier_0/`
-- Écrase chaque fichier avec son contenu chiffré
-- Crée les fichiers `.meta` correspondants
-
-**Test 2 : Déchiffrement complet**
-
-- Récupère le mot de passe du serveur
-- Déchiffre tous les fichiers
-- Restaure les fichiers originaux
-
-**Test 3 : Changement de mot de passe**
-
-- Génère un nouveau mot de passe
-- Réencapsule la Root Key
-- Vérifie que la nouvelle clé fonctionne
-
-**Test 4 : Déchiffrement d'un fichier**
-
-- Rechiffrement du dossier
-- Déchiffrement d'un seul fichier via `decrypt_file()`
-- Vérification que les autres fichiers restent chiffrés
+| Test | Description |
+|------|-------------|
+| Test 1 | Chiffrement récursif hiérarchique de `dossier_0` (4 fichiers) |
+| Test 2 | Déchiffrement complet via `decrypt_all()` |
+| Test 3 | Changement de mot de passe sans rechiffrement |
+| Test 4 | Rechiffrement + déchiffrement d'un seul fichier via `decrypt_file()` |
