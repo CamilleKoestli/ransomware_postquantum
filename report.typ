@@ -202,7 +202,7 @@ Le ransomware possède les fonctionnalités suivantes :
 == Initialisation et chiffrement
 
 #figure(
-  image("out/schema/01-Initialisation_Chiffrement.png", width: 70%),
+  image("out/schema/01-Initialisation_Chiffrement.png", width: 64%),
   caption: [Processus d'initialisation et de chiffrement]
 )
 
@@ -325,17 +325,17 @@ Le déchiffrement est réalisé par `_decrypt_dir_recursive()` en partant de la 
 
 *Pour chaque sous-dossier (traité en premier)* :
 
-+ *Lire `dossier.key`* et désencapsuler la `folder_key` avec `parent_key` (AES-GCM).
-+ Supprimer `dossier.key` et `dossier.root_key` s'il existe.
++ *Résoudre la clé du dossier* : si `dossier.root_key` existe, désencapsuler la `folder_key` avec la Root Key (AES-GCM) ; sinon utiliser `dossier.key` avec `parent_key`. La présence de `.root_key` indique que le dossier est hors du niveau racine du chiffrement et que sa clé est directement accessible depuis la Root Key.
++ Supprimer `dossier.key` et `dossier.root_key` si présents.
 + Récurser dans le sous-dossier avec `folder_key` comme `parent_key`.
 
 *Pour chaque fichier `.enc`* :
 
-+ *Lire `fichier.key`* et désencapsuler la `file_key` avec `parent_key` (AES-GCM).
++ *Résoudre la clé du fichier* : si `fichier.root_key` existe, désencapsuler la `file_key` avec la Root Key (AES-GCM) ; sinon utiliser `fichier.key` avec `parent_key`. Ce mécanisme permet le déchiffrement partiel d'un sous-dossier : lorsque `decrypt_all()` est appelé sur un sous-dossier directement, `parent_key` est la Root Key mais les `.key` ont été chiffrés avec la `folder_key` du sous-dossier. Les fichiers `.root_key`, chiffrés directement avec la Root Key lors du chiffrement, permettent de contourner ce problème.
 + *Lire `fichier.enc`* : extraire le nonce (12 premiers octets) et le ciphertext avec tag.
 + *Déchiffrer* avec AES-GCM en utilisant `file_key` et `nonce`.
 + *Écrire* le fichier original (nom sans `.enc`).
-+ *Supprimer* `fichier.enc`, `fichier.key` et `fichier.root_key` s'il existe.
++ *Supprimer* `fichier.enc`, `fichier.key` et `fichier.root_key` si présents.
 
 
 == Déchiffrement d'un fichier spécifique
@@ -371,7 +371,7 @@ Le déchiffrement individuel ne nécessite pas le mot de passe complet. La victi
 + *Écrire* le fichier original (nom sans `.enc`).
 + *Supprimer* `fichier.enc`, `fichier.key` et `fichier.root_key`.
 
-== Modification du mot de passe
+== Modification du mot de passe (optionnel)
 
 #figure(
   image("out/schema/04-Modification_Mdp.png", width: 90%),
@@ -532,17 +532,15 @@ Ce projet implémente toutes les fonctionnalités de base demandées dans la con
 
 Le chiffrement récursif (`encrypt_directory()`) et le déchiffrement récursif (`decrypt_all()`) permettent de traiter une arborescence complète de fichiers tout en maintenant une hiérarchie de clés cryptographiques.
 
-=== Fonctionnement
+Le chiffrement utilise la récursion avec `_encrypt_dir_recursive(dir_path, parent_key, root_key, is_root_level)`. Cela permet de propager la clé parente à chaque niveau.
 
-Le chiffrement utilise une récursion via `_encrypt_dir_recursive(dir_path, parent_key, root_key, is_root_level)` à la place d'un `os.walk()` plat. Cela permet de propager la clé parente à chaque niveau de l'arborescence.
-
-À chaque niveau de récursion :
+À chaque niveau :
 
 + *Snapshot des entrées* : `list(dir_path.iterdir())` est réalisé en début de fonction pour éviter d'itérer sur des fichiers créés pendant le traitement (`.key`, `.root_key`, `.enc`).
 
-+ *Traitement des dossiers* : pour chaque sous-dossier non exclu, une `folder_key` est générée et l'encapsulation est effectuée avec `parent_key` (→ `.key`) et éventuellement avec `root_key` (→ `.root_key` si hors-racine). La récursion est lancée avec `folder_key` comme `parent_key`.
++ *Traitement des dossiers* : pour chaque sous-dossier non exclu, une `folder_key` est générée et l'encapsulation est effectuée avec `parent_key` et éventuellement avec `root_key` (si hors-racine).
 
-+ *Traitement des fichiers* : `_should_skip_file()` vérifie le nom et l'extension contre `EXCLUDED_FILES` et `EXCLUDED_EXTENSIONS` (structures `set`, vérification O(1)).
++ *Traitement des fichiers* : pour chaque fichier non exclu, une `file_key` est générée, le fichier est chiffré avec AES-256-GCM et sauvegardé en `.enc`, puis le fichier original est supprimé. La `file_key` est ensuite encapsulée avec `parent_key` et, si le fichier est hors du niveau racine, aussi avec `root_key` pour permettre le déchiffrement individuel.
 
 
 = Améliorations possibles
@@ -564,6 +562,7 @@ La rédaction de ce rapport a bénéficié de l’assistance d’intelligences a
 - La structuration de certains paragraphes pour une meilleure cohérence.
 - La vérification des termes techniques.
 - La correction et ajouts d'éléments sur les schémas explicatifs.
+- L'aide à la réalisation des diagrammes.
 
 Cette aide m’a permis de maintenir une certaine qualité dans la rédaction tout en respectant l’aspect technique et les objectifs pédagogiques du projet. L’IA n’a pas écrit le rapport à ma place, mais elle a été utilisée comme un outil de soutien à la rédaction.
 

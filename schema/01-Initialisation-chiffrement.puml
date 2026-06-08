@@ -21,30 +21,30 @@ victime -> victime: Chiffre RK avec MK\n(AES-GCM 256 bits)
 victime -> rootkey: Stocke dans rootkey.bin :\nwrapped_rk (ciphertext, nonce),\nkyber_ciphertext, sel, params Argon2
 activate rootkey
 
-== Chiffrement récursif hiérarchique ==
+== Chiffrement récursif ==
 note over victime, fs
   parent_key = RK (niveau racine)
   is_root_level = True
 end note
 
-loop Pour chaque entrée dans le dossier cible
-  alt Entrée est un sous-dossier
+loop Répéter pour chaque fichier/dossier
+  alt Si c'est un sous-dossier
     victime -> victime: Génère folder_key aléatoire (256 bits)
     victime -> victime: Chiffre folder_key avec parent_key\n(AES-GCM) → dossier.key
     victime -> fs: Sauvegarde dossier.key\n(ciphertext, nonce)
-    alt Le dossier n'est pas au niveau racine
+    alt Si le dossier n'est pas au niveau racine
       victime -> victime: Chiffre folder_key avec RK\n(AES-GCM) → dossier.root_key
       victime -> fs: Sauvegarde dossier.root_key\n(ciphertext, nonce)
     end
     note right: Récursion avec folder_key\ncomme parent_key
-  else Entrée est un fichier
+  else Si c'est un fichier
     victime -> victime: Génère file_key aléatoire (256 bits)
     victime -> victime: Chiffre fichier avec file_key\n(AES-GCM 256 bits)\n→ nonce || ciphertext_with_tag
     victime -> fs: Sauvegarde fichier.enc
     victime -> fs: Supprime fichier original
     victime -> victime: Chiffre file_key avec parent_key\n(AES-GCM) → fichier.key
     victime -> fs: Sauvegarde fichier.key\n(ciphertext, nonce)
-    alt Le fichier n'est pas au niveau racine
+    alt Si le fichier n'est pas au niveau racine
       victime -> victime: Chiffre file_key avec RK\n(AES-GCM) → fichier.root_key
       victime -> fs: Sauvegarde fichier.root_key\n(ciphertext, nonce)
     end

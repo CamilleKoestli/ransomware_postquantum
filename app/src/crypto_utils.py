@@ -86,7 +86,7 @@ def encrypt_aes_gcm(data: bytes, key: bytes) -> Tuple[bytes, bytes]:
         key: Clé de chiffrement (32 octets)
 
     Returns:
-        Tuple (ciphertext_with_tag, nonce) — tag inclus dans ciphertext (16 derniers octets)
+        Tuple (ciphertext_with_tag, nonce)
     """
     if len(key) != config.KEY_SIZE:
         raise ValueError(f"La clé doit faire {config.KEY_SIZE} octets")

