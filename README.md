@@ -1,10 +1,10 @@
 # Ransomware Post-Quantique
 
-Projet académique pour le cours CAA 2025-2026 (Cryptographie Appliquée Avancée)
+Projet académique pour le cours ICR 2026-2027 (Industrial Cryptography)
 
 ## Auteur
 
-Camille Koestli - HEIG-VD
+Camille Koestli - HES-SO
 
 ## Description
 

