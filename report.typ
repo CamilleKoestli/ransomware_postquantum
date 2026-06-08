@@ -1,6 +1,6 @@
-#let titre = "CAA mini projet - Ransomware post quantique"
+#let titre = "ICR mini projet - Ransomware post quantique"
 #let auteurs = ("Camille Koestli",)
-#let header_titre = "CAA - mini projet"
+#let header_titre = "ICR - mini projet"
 #let header_auteurs = "Koestli"
 #let project(
   title: "",
@@ -9,7 +9,7 @@
   authors: (),
   nameAuthors: (),
   date: "",
-  logo: "HEIG-VD_logo.png",
+  logo: "mse_logo.jpg",
   body,
 ) = {
   set page(numbering: "1", number-align: center)
@@ -24,7 +24,7 @@
   // Title page.
   v(0.6fr)
   if logo != none {
-    align(right, image(logo, width: 26%))
+    align(right, image(logo, width: 50%))
   }
   v(9.6fr)
 
