@@ -13,7 +13,10 @@ ARGON2_HASH_LEN = 32  # 256 bits
 ARGON2_SALT_LEN = 16  # 128 bits
 
 # Extensions fichiers
-META_EXTENSION = ".meta"
+KEY_EXTENSION = ".key"
+ROOT_KEY_EXTENSION = ".root_key"
+ENC_EXTENSION = ".enc"
+META_EXTENSION = ".meta"  # legacy
 ROOTKEY_FILENAME = "rootkey.bin"
 
 # Fichiers à ne pas chiffrer
@@ -32,6 +35,9 @@ EXCLUDED_FILES = {
 EXCLUDED_EXTENSIONS = {
     ".py",
     ".pyc",
+    KEY_EXTENSION,
+    ROOT_KEY_EXTENSION,
+    ENC_EXTENSION,
     META_EXTENSION,
 }
 

@@ -77,7 +77,7 @@ def derive_key_argon2(
     return key
 
 
-def encrypt_aes_gcm(data: bytes, key: bytes) -> Tuple[bytes, bytes, bytes]:
+def encrypt_aes_gcm(data: bytes, key: bytes) -> Tuple[bytes, bytes]:
     """
     Chiffre données avec AES-GCM 256 bits
 
@@ -86,34 +86,25 @@ def encrypt_aes_gcm(data: bytes, key: bytes) -> Tuple[bytes, bytes, bytes]:
         key: Clé de chiffrement (32 octets)
 
     Returns:
-        Tuple (ciphertext, nonce, tag)
+        Tuple (ciphertext_with_tag, nonce) — tag inclus dans ciphertext (16 derniers octets)
     """
     if len(key) != config.KEY_SIZE:
         raise ValueError(f"La clé doit faire {config.KEY_SIZE} octets")
 
-    # Génère nonce aléatoire de 96 bits
     nonce = secrets.token_bytes(12)
-
     aesgcm = AESGCM(key)
-
-    ciphertext = aesgcm.encrypt(nonce, data, None)
-
-    # Extrait tag (16 derniers octets)
-    tag = ciphertext[-16:]
-    ciphertext_without_tag = ciphertext[:-16]
-
-    return ciphertext_without_tag, nonce, tag
+    ciphertext_with_tag = aesgcm.encrypt(nonce, data, None)
+    return ciphertext_with_tag, nonce
 
 
-def decrypt_aes_gcm(ciphertext: bytes, key: bytes, nonce: bytes, tag: bytes) -> bytes:
+def decrypt_aes_gcm(ciphertext_with_tag: bytes, key: bytes, nonce: bytes) -> bytes:
     """
     Déchiffre données avec AES-GCM 256 bits
 
     Args:
-        ciphertext: Données chiffrées
+        ciphertext_with_tag: Données chiffrées avec tag en suffixe (16 octets)
         key: Clé de déchiffrement (32 octets)
         nonce: Nonce utilisé pour le chiffrement (12 octets)
-        tag: Tag (16 octets)
 
     Returns:
         Données déchiffrées
@@ -122,16 +113,10 @@ def decrypt_aes_gcm(ciphertext: bytes, key: bytes, nonce: bytes, tag: bytes) -> 
         raise ValueError(f"La clé doit faire {config.KEY_SIZE} octets")
 
     aesgcm = AESGCM(key)
-
-    full_ciphertext = ciphertext + tag
-
-    # Déchiffre et vérifie tag
-    plaintext = aesgcm.decrypt(nonce, full_ciphertext, None)
-
-    return plaintext
+    return aesgcm.decrypt(nonce, ciphertext_with_tag, None)
 
 
-def wrap_key_aes_gcm(key_to_wrap: bytes, wrapping_key: bytes) -> Tuple[bytes, bytes, bytes]:
+def wrap_key_aes_gcm(key_to_wrap: bytes, wrapping_key: bytes) -> Tuple[bytes, bytes]:
     """
     Encapsule clé avec AES-GCM 256 bits
 
@@ -140,7 +125,7 @@ def wrap_key_aes_gcm(key_to_wrap: bytes, wrapping_key: bytes) -> Tuple[bytes, by
         wrapping_key: Clé d'encapsulation (32 octets)
 
     Returns:
-        Tuple (ciphertext, nonce, tag)
+        Tuple (ciphertext_with_tag, nonce)
     """
     if len(wrapping_key) != config.KEY_SIZE:
         raise ValueError(f"[ENCAPSULATION] La clé doit faire {config.KEY_SIZE} octets")
@@ -148,15 +133,14 @@ def wrap_key_aes_gcm(key_to_wrap: bytes, wrapping_key: bytes) -> Tuple[bytes, by
     return encrypt_aes_gcm(key_to_wrap, wrapping_key)
 
 
-def unwrap_key_aes_gcm(ciphertext: bytes, wrapping_key: bytes, nonce: bytes, tag: bytes) -> bytes:
+def unwrap_key_aes_gcm(ciphertext_with_tag: bytes, wrapping_key: bytes, nonce: bytes) -> bytes:
     """
     Désencapsule une clé avec AES-GCM 256 bits
 
     Args:
-        ciphertext: Clé encapsulée
+        ciphertext_with_tag: Clé encapsulée avec tag en suffixe
         wrapping_key: Clé de désencapsulation (32 octets)
         nonce: Nonce utilisé pour l'encapsulation (12 octets)
-        tag: Tag (16 octets)
 
     Returns:
         Clé désencapsulée
@@ -164,7 +148,7 @@ def unwrap_key_aes_gcm(ciphertext: bytes, wrapping_key: bytes, nonce: bytes, tag
     if len(wrapping_key) != config.KEY_SIZE:
         raise ValueError(f"[DESENCAPSULATION] La clé doit faire {config.KEY_SIZE} octets")
 
-    return decrypt_aes_gcm(ciphertext, wrapping_key, nonce, tag)
+    return decrypt_aes_gcm(ciphertext_with_tag, wrapping_key, nonce)
 
 
 def generate_kyber_keypair() -> Tuple[bytes, bytes]:

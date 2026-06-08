@@ -3,7 +3,7 @@
 title Initialisation et Chiffrement des Fichiers
 
 actor Attaquant as attacker
-participant "Victime" as victime
+participant "Victime (Client)" as victime
 participant "Système de fichiers" as fs
 database "rootkey.bin" as rootkey
 
@@ -12,27 +12,43 @@ attacker -> victime: Lance le ransomware
 activate victime
 
 victime -> victime: Génère mot de passe aléatoire\ndu dictionnaire
-victime -> victime: Dérive Master Key (MK)\navec Argon2 (256 bits)
-victime -> victime: Génère Root Key (RK) via\nCRYSTALS-Kyber encapsulation
+victime -> victime: Génère sel aléatoire (128 bits)
+victime -> victime: Dérive Master Key (MK)\navec Argon2id (256 bits)
+victime -> victime: Encapsule Root Key (RK) via\nCRYSTALS-Kyber\n→ kyber_ciphertext + RK (256 bits)
 
 == Chiffrement de la Root Key ==
 victime -> victime: Chiffre RK avec MK\n(AES-GCM 256 bits)
-victime -> rootkey: Stocke RK chiffrée (ciphertext, nonce, tag)\net kyber_ciphertext dans rootkey.bin
+victime -> rootkey: Stocke dans rootkey.bin :\nwrapped_rk (ciphertext, nonce),\nkyber_ciphertext, sel, params Argon2
 activate rootkey
 
-== Chiffrement des fichiers ==
-loop Pour chaque fichier
+== Chiffrement récursif hiérarchique ==
+note over victime, fs
+  parent_key = RK (niveau racine)
+  is_root_level = True
+end note
 
-    victime -> victime: Génère clé fichier\n(256 bits)
-    victime -> victime: Génère nonce unique
-    victime -> victime: Chiffre le fichier\navec AES-GCM 256 bits
-
-    victime -> victime: Obtient le tag d'authentification
-    victime -> victime: Chiffre la clé fichier avec RK\n(AES-GCM 256 bits)\nobtient: wrapped_key (ciphertext, nonce, tag)
-
-    victime -> fs: Écrit fichier chiffré et\nmétadonnées (clé encapsulée)
-    fs --> victime: OK
-    deactivate fs
+loop Pour chaque entrée dans le dossier cible
+  alt Entrée est un sous-dossier
+    victime -> victime: Génère folder_key aléatoire (256 bits)
+    victime -> victime: Chiffre folder_key avec parent_key\n(AES-GCM) → dossier.key
+    victime -> fs: Sauvegarde dossier.key\n(ciphertext, nonce)
+    alt Le dossier n'est pas au niveau racine
+      victime -> victime: Chiffre folder_key avec RK\n(AES-GCM) → dossier.root_key
+      victime -> fs: Sauvegarde dossier.root_key\n(ciphertext, nonce)
+    end
+    note right: Récursion avec folder_key\ncomme parent_key
+  else Entrée est un fichier
+    victime -> victime: Génère file_key aléatoire (256 bits)
+    victime -> victime: Chiffre fichier avec file_key\n(AES-GCM 256 bits)\n→ nonce || ciphertext_with_tag
+    victime -> fs: Sauvegarde fichier.enc
+    victime -> fs: Supprime fichier original
+    victime -> victime: Chiffre file_key avec parent_key\n(AES-GCM) → fichier.key
+    victime -> fs: Sauvegarde fichier.key\n(ciphertext, nonce)
+    alt Le fichier n'est pas au niveau racine
+      victime -> victime: Chiffre file_key avec RK\n(AES-GCM) → fichier.root_key
+      victime -> fs: Sauvegarde fichier.root_key\n(ciphertext, nonce)
+    end
+  end
 end
 
 victime --> attacker: Fichiers chiffrés

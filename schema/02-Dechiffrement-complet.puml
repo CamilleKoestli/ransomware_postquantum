@@ -1,10 +1,10 @@
 @startuml 02-Déchiffrement_Complet
 
-title Déchiffrement Complet
+title Déchiffrement Complet (decrypt_all)
 
 actor Attaquant as attacker
 participant "Serveur" as server
-participant "Victime" as victime
+participant "Victime (Client)" as victime
 database "rootkey.bin" as rootkey
 participant "Système de fichiers" as fs
 
@@ -14,24 +14,43 @@ activate server
 server -> victime: Envoie mot de passe\net paramètres Argon2
 activate victime
 
-== Déchiffrement de la Root Key ==
-victime -> victime: Dérive MK avec Argon2\n(mot de passe + paramètres)
+== Récupération de la Root Key ==
+victime -> victime: Dérive MK avec Argon2id\n(mot de passe + sel + paramètres)
+victime -> rootkey: Lit wrapped_rk_ciphertext\net wrapped_rk_nonce
+activate rootkey
+rootkey --> victime: Métadonnées RK
 deactivate rootkey
 
-victime -> victime: Déchiffre RK avec MK\n(AES-GCM 256 bits)
+victime -> victime: Désencapsule RK avec MK\n(AES-GCM 256 bits)\n→ Root Key
 
-== Déchiffrement des fichiers ==
-loop Pour chaque fichier chiffré
-    victime -> fs: Lit fichier chiffré\net métadonnées
+== Déchiffrement récursif hiérarchique ==
+note over victime, fs
+  parent_key = RK (niveau racine)
+end note
+
+loop Pour chaque entrée dans le dossier (récursif)
+  alt Entrée est un sous-dossier (traité en premier)
+    victime -> fs: Lit dossier.key\n(ciphertext, nonce)
     activate fs
-
-    victime -> victime: Déchiffre la clé fichier avec RK\n(AES-GCM 256 bits)\nà partir de wrapped_key (ciphertext, nonce, tag)
-
-    victime -> victime: Déchiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce, tag)
-
-    victime -> fs: Écrit fichier déchiffré
-    fs --> victime: OK
+    fs --> victime: Données chiffrées
     deactivate fs
+    victime -> victime: Désencapsule folder_key avec parent_key\n(AES-GCM 256 bits)
+    victime -> fs: Supprime dossier.key\n(et dossier.root_key si existe)
+    note right: Récursion avec folder_key\ncomme parent_key
+  else Entrée est un fichier .enc
+    victime -> fs: Lit fichier.key\n(ciphertext, nonce)
+    activate fs
+    fs --> victime: file_key chiffrée
+    deactivate fs
+    victime -> victime: Désencapsule file_key avec parent_key\n(AES-GCM 256 bits)
+    victime -> fs: Lit fichier.enc\n(nonce || ciphertext_with_tag)
+    activate fs
+    fs --> victime: Contenu chiffré
+    deactivate fs
+    victime -> victime: Déchiffre fichier avec file_key\n(AES-GCM 256 bits)
+    victime -> fs: Écrit fichier original (nom sans .enc)
+    victime -> fs: Supprime fichier.enc, fichier.key\n(et fichier.root_key si existe)
+  end
 end
 
 victime --> server: Déchiffrement terminé

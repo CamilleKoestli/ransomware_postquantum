@@ -3,13 +3,13 @@
 title Architecture Globale du Ransomware
 
 package "Machine Victime" {
-    component "Victime" as victime {
+    component "Victime (Client)" as victime {
         [Module Chiffrement\nAES-GCM 256 bits] as aes
-        [Module Dérivation\nArgon2] as argon
+        [Module Dérivation\nArgon2id] as argon
         [Module Post-Quantique\nCRYSTALS-Kyber] as kyber
     }
 
-    database "Fichiers" as files
+    database "Fichiers chiffrés" as files
     database "rootkey.bin" as rootkey
 }
 
@@ -17,7 +17,8 @@ package "Serveur Attaquant" {
     component "Serveur" as server {
         [Gestion des clés] as keymanager
         [Communication] as comm
-        [Stockage RK] as storage
+        [Clé secrète Kyber] as storage
+        [decrypt_file_key()] as dfl
     }
 }
 
@@ -31,11 +32,22 @@ victime --> rootkey : Stocke RK chiffrée
 
 
 note bottom of files
-    **Métadonnées:**
-    - wrapped_key (ciphertext, nonce, tag)
-    - Clé fichier chiffrée avec RK
-      via AES-GCM 256 bits
-    - Nonce et tag du fichier
+  **Par fichier/dossier :**
+  - fichier.enc : nonce || ciphertext_with_tag
+  - fichier.key : file_key chiffrée avec parent_key
+  - fichier.root_key : file_key chiffrée avec RK
+    (uniquement pour les items hors-racine)
+
+  **Hiérarchie :**
+  RK → folder_key → file_key
+end note
+
+note bottom of rootkey
+  **rootkey.bin :**
+  - wrapped_rk_ciphertext (RK chiffrée avec MK)
+  - wrapped_rk_nonce
+  - kyber_ciphertext
+  - sel Argon2 + paramètres
 end note
 
 @enduml

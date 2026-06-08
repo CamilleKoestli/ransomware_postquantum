@@ -1,40 +1,47 @@
 @startuml 03-Dechiffrement_Spécifique
 
-title Déchiffrement fichier spécifique
+title Déchiffrement d'un fichier spécifique (decrypt_file)
 
 actor Attaquant as attacker
 participant "Serveur" as server
-participant "Victime" as victime
+participant "Victime (Client)" as victime
 participant "Système de fichiers" as fs
-database "Root Key (RK)" as rk
 
-== Demande de déchiffrement ==
-attacker -> victime: Demande déchiffrement\nd'un fichier spécifique
+== Demande de déchiffrement individuel ==
+attacker -> victime: Demande déchiffrement\nd'un fichier spécifique\n(paiement partiel)
 activate victime
 
+victime -> fs: Lit fichier.root_key\n(file_key chiffrée avec RK)\nou fichier.key si niveau racine
+activate fs
+fs --> victime: Données chiffrées (ciphertext, nonce)
+deactivate fs
 
-victime -> server: Envoie wrapped_key\n(ciphertext, nonce, tag)\net kyber_ciphertext
+victime -> fs: Lit kyber_ciphertext\ndepuis rootkey.bin
+activate fs
+fs --> victime: kyber_ciphertext
+deactivate fs
+
+== Déchiffrement de la clé par le serveur ==
+victime -> server: Envoie root_key_data\n(ciphertext, nonce)\n+ kyber_ciphertext
 activate server
 
-== Déchiffrement de la clé ==
-server -> rk: Récupère RK via\nKyber désencapsulation
-activate rk
-rk --> server: RK
-deactivate rk
+server -> server: Reconstruit RK via\nKyber désencapsulation\n(clé secrète Kyber + kyber_ciphertext)
+server -> server: Désencapsule file_key avec RK\n(AES-GCM 256 bits)
 
-server -> server: Unwrap clé fichier avec RK\n(AES-GCM 256 bits)
-
-server -> victime: Envoie clé fichier déchiffrée
+server -> victime: Retourne file_key en clair
 deactivate server
 
 == Déchiffrement du fichier ==
-victime -> fs: Lit fichier chiffré
+victime -> fs: Lit fichier.enc\n(nonce || ciphertext_with_tag)
 activate fs
 fs --> victime: Contenu chiffré
+deactivate fs
 
-victime -> victime: Déchiffre le fichier\navec AES-GCM 256 bits\n(clé fichier, nonce, tag)
+victime -> victime: Déchiffre fichier avec file_key\n(AES-GCM 256 bits)
 
-victime -> fs: Écrit fichier déchiffré
+victime -> fs: Écrit fichier original (nom sans .enc)
+victime -> fs: Supprime fichier.enc,\nfichier.key, fichier.root_key
+activate fs
 fs --> victime: OK
 deactivate fs
 
